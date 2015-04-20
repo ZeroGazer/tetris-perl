@@ -13,9 +13,7 @@ my $wGame;                                # canvas
 my $gameover = 0;
 my $updateInterval = 500;
 
-my @patterns = (["***",
-                 "* *"],
-                [" * ",
+my @patterns = ([" * ",
                  "***"],
                 ["****"],
                 ["  *",
@@ -79,7 +77,7 @@ sub moveRight{
 			for my $j (0..length($line)-1){
 				my $k = length($line)-1-$j;
 				if ($line[$k] eq "*") {
-					if (${$board[$i+$yOffset]}[$xOffset+$k+1]) {return;} # if a cell right is filled, return with doing nth
+					if (${$board[$i+$yOffset]}[$xOffset+$k+1]) {return;} # if a cell's right is filled, return with doing nth
 					last;
 				}
 			}
@@ -120,7 +118,7 @@ sub moveRight{
 			}
 		}
 	}
-	#printBoard();
+	printBoard();
 }
 
 sub moveLeft{
@@ -136,12 +134,10 @@ sub moveLeft{
 			my $yOffset = $currentBlockCoors[1];
 			for my $j (0..length($line)-1){
 				if ($line[$j] eq "*") {
-				print ("\${\$board[", $i+$yOffset, "]}[", $xOffset+$j-1, "] = ${$board[$i+$yOffset]}[$xOffset+$j-1] ");
-					if (${$board[$i+$yOffset]}[$xOffset+$j-1]) {return;} # if a cell left is filled, return with doing nth
+					if (${$board[$i+$yOffset]}[$xOffset+$j-1]) {return;} # if a cell's left is filled, return with doing nth
 					last;
 				}
 			}
-			print "\n";
 		}
 	
 		# change @board data to 0
@@ -178,17 +174,29 @@ sub moveLeft{
 			}
 		}
 	}
-	#printBoard();
+	printBoard();
 }
 
 sub moveDown{
 	print "pressed down arrow\n";
 	
-	my $touchedGround = 0;
-	# TODO : check touched ground or not
+	if ($currentBlockCoors[3] < $MAX_ROWS-1){
 	
-	if (!$touchedGround){
-	
+		for my $i (0..length($currentPattern[0])-1){
+			for my $j (1..scalar(@currentPattern)){
+				my $k = scalar(@currentPattern)-$j;
+				my $line = $currentPattern[$k];
+				my @line = split(//, $line);
+
+				my $xOffset = $currentBlockCoors[0];
+				my $yOffset = $currentBlockCoors[1];
+				if ($line[$i] eq "*"){
+					if (${$board[$k+$yOffset+1]}[$i+$xOffset]) {return;}
+					last;
+				}
+			}
+		}
+
 		# change @board data to 0
 		for my $i (0..scalar(@currentPattern)-1){
 			my $line = $currentPattern[$i];
@@ -223,7 +231,7 @@ sub moveDown{
 			}
 		}
 	}
-	#printBoard();
+	printBoard();
 }
 
 sub fallDown{
@@ -240,7 +248,8 @@ sub drawLines{
 sub printBoard{
 	foreach my $row (@board){
 		foreach my $cell (@$row){
-			print "$cell ";
+			if ($cell) {print "* ";}
+			else	   {print "  ";}
 		}
 		print "\n";
 	}
@@ -282,6 +291,19 @@ sub clearBoard{
 	}
 }
 
+sub createTempTile{
+	my @coor = @_;
+	$wGame->createRectangle($coor[1]*$TILE_SIZE, $coor[0]*$TILE_SIZE, ($coor[1]+1)*$TILE_SIZE, ($coor[0]+1)*$TILE_SIZE, '-fill'=>'#123456');
+	${$board[$coor[0]]}[$coor[1]] = 1;
+}
+
+sub createTempTiles{
+	my @coors = @_;
+	for my $row ($coors[0]..$coors[2]){
+		createTempTile($row, $coors[1]);
+	}
+}
+
 sub init{
 	createScreen();
 	drawLines();
@@ -291,14 +313,19 @@ sub init{
 	$wBase->bind('<KeyPress-Down>', \&moveDown);
 	$wBase->bind('<KeyPress-space>', \&fallDown);
 	clearBoard();
-	# the following 4 lines are for testing
-	${$board[1]}[7] = 1;
-	${$board[1]}[1] = 1;
-	$wGame->createRectangle(7*$TILE_SIZE, $TILE_SIZE, 8*$TILE_SIZE, 2*$TILE_SIZE, '-fill'=>'#FF0000');
-	$wGame->createRectangle($TILE_SIZE, $TILE_SIZE, 2*$TILE_SIZE, 2*$TILE_SIZE, '-fill'=>'#FF0000');
+
+	# the following lines are for testing
+	createTempTiles(12,0,14,0);
+	createTempTiles(12,1,14,1);
+	createTempTiles(9,2,14,2);
+	createTempTiles(10,3,14,3);
+	createTempTiles(10,4,14,4);
+	createTempTiles(13,5,14,5);
+	createTempTiles(7,6,14,6);
+	createTempTiles(13,8,14,8);
+	createTempTiles(12,9,14,9);
+
 	createTile();
-	
-	
 	
 	start();
 }
