@@ -1,4 +1,4 @@
-﻿use strict;
+use strict;
 use Tk;
 
 my $MAX_COLS         = 10 ;       # 10 cells wide
@@ -41,12 +41,22 @@ my @currentBlock;
 my @currentPattern;
 my $currentColor;
 my @currentBlockCoors; # x0, y0, x1, y1; 0 : left up; 1 : right bottom (in terms of the grid)
+my @fixedBlock; # store ref to all blocks which hit ground
 my @board;
+my @colorInBoard; # -1:no color, 0:color0, ...
 
 sub update{
 	if (!$gameover && $playing){
 		moveDown();
 		if (isHitGround()){ 
+			rmbColor();
+
+			# reset some data
+			foreach my $block (@currentBlock){
+				push (@fixedBlock, $block);
+			}
+			@currentBlock = ();
+
 			clearRows();
 			if (isHitSky()) { gameover(); } # gameover when hitting both ground and sky
 			else			{ createTile(); }
@@ -81,21 +91,62 @@ sub createScreen{
     $wQuitBitton->pack('-side'=> 'right', '-fill' => 'y', '-expand' => 'y');
 }
 
+sub rmbColor{
+
+	my $colorIndex;
+	for my $i (0..scalar(@colors)-1){
+		if ($colors[$i] eq $currentColor) {$colorIndex = $i;}
+	}
+
+	my $xOffset = $currentBlockCoors[0];
+	my $yOffset = $currentBlockCoors[1];
+	for my $i (0..scalar(@currentPattern)-1){
+		my @line = split(//, $currentPattern[$i]);
+
+		for my $j (0..scalar(@line)-1){
+			if ($line[$j] eq "*"){
+				${$colorInBoard[$yOffset+$i]}[$xOffset+$j] = $colorIndex;
+			}
+		}
+	}
+}
+
 sub clearRow{
+	$wBase->after(200);
+
 	my $delRow = $_[0];
+
 	# delete the row first
 	for my $i (0..$MAX_COLS-1){
-		${$board[$delRow]}[$i] = 0;
+		${$board[$delRow]}[$i] = 0;	
+		${$colorInBoard[$delRow]}[$i] = -1;
 	}
+	
 	# move the tiles one unit below
 	for my $col (0..$MAX_COLS-1){
 		for my $row (1..$delRow){
 			my $adjustedRow = $row = $delRow - $row;
-			# move the data
-			${$board[$adjustedRow+1]}[$col] = ${$board[$adjustedRow]}[$col];
-			# move the tile visually 
-			# TODO
+			${$board[$adjustedRow+1]}[$col] = ${$board[$adjustedRow]}[$col]; # move the data
+			${$colorInBoard[$adjustedRow+1]}[$col] = ${$colorInBoard[$adjustedRow]}[$col]; # move the data
 		}
+	}
+
+	for my $block (@fixedBlock){
+		$wGame->delete($block);
+	}
+	@fixedBlock = ();
+
+	for my $row (0..$MAX_ROWS-1){
+		for my $col (0..$MAX_COLS-1){
+			if (${$board[$row]}[$col]){
+				print "Y ";
+				my $color = $colors[${$colorInBoard[$row]}[$col]];
+				my $block = $wGame->createRectangle($col*$TILE_SIZE, $row*$TILE_SIZE, ($col+1)*$TILE_SIZE, ($row+1)*$TILE_SIZE, '-fill' => $color);
+				push (@fixedBlock, $block);
+			}
+			else {print "_ ";}
+		}
+		print "\n";
 	}
 }
 
@@ -120,8 +171,21 @@ sub isHitSky{
 }
 
 sub isHitGround{
-	my $hit = 0;
-	if ($currentBlockCoors[3] == $MAX_ROWS-1){ return 1; }
+	
+	my $botMostY = $currentBlockCoors[3];
+	for my $i (1..scalar(@currentPattern)){
+		my $k = scalar(@currentPattern) - $i;
+		my @line = split(//, $currentPattern[$k]);
+		my $emptyCol = 1;
+
+		for my $j (0..scalar(@line)-1){
+			if ($line[$j] eq "*"){ $emptyCol = 0; last; }
+		}
+		if (!$emptyCol){ last; }
+		$botMostY--;
+	}
+
+	if ($botMostY == $MAX_ROWS-1){ return 1; }
 	else{
 		my $lastRow = scalar(@currentPattern)-1;
 		my @line = split(//, $currentPattern[$lastRow]);
@@ -142,8 +206,21 @@ sub gameover{
 }
 
 sub moveRight{
-	
-	if ($currentBlockCoors[2] < $MAX_COLS-1){
+
+	my $rightMostX = $currentBlockCoors[2];
+	for my $i (1..length($currentPattern[0])){
+		my $k = length($currentPattern[0]) - $i;
+		my $emptyCol = 1;
+
+		for my $j (0..scalar(@currentPattern)-1){
+			my @line = split(//, $currentPattern[$j]);
+			if ($line[$k] eq "*"){ $emptyCol = 0; last; }
+		}
+		if (!$emptyCol){ last; }
+		$rightMostX--;
+	}
+
+	if ($rightMostX < $MAX_COLS-1){
 		
 		for my $i (0..scalar(@currentPattern)-1){
 			my $line = $currentPattern[$i];
@@ -200,7 +277,19 @@ sub moveRight{
 
 sub moveLeft{
 	
-	if ($currentBlockCoors[0] > 0){
+	my $leftMostX = $currentBlockCoors[0];
+	for my $i (0..length($currentPattern[0])-1){
+		my $emptyCol = 1;
+
+		for my $j (0..scalar(@currentPattern)-1){
+			my @line = split(//, $currentPattern[$j]);
+			if ($line[$i] eq "*"){ $emptyCol = 0; last; }
+		}
+		if (!$emptyCol){ last; }
+		$leftMostX++;
+	}
+
+	if ($leftMostX > 0){
 		
 		for my $i (0..scalar(@currentPattern)-1){
 			my $line = $currentPattern[$i];
@@ -255,7 +344,20 @@ sub moveLeft{
 
 sub moveDown{
 	
-	if ($currentBlockCoors[3] < $MAX_ROWS-1){
+	my $botMostY = $currentBlockCoors[3];
+	for my $i (1..scalar(@currentPattern)){
+		my $k = scalar(@currentPattern) - $i;
+		my @line = split(//, $currentPattern[$k]);
+		my $emptyCol = 1;
+
+		for my $j (0..scalar(@line)-1){
+			if ($line[$j] eq "*"){ $emptyCol = 0; last; }
+		}
+		if (!$emptyCol){ last; }
+		$botMostY--;
+	}
+
+	if ($botMostY < $MAX_ROWS-1){
 	
 		for my $i (0..length($currentPattern[0])-1){
 			for my $j (1..scalar(@currentPattern)){
@@ -306,7 +408,7 @@ sub moveDown{
 			}
 		}
 	}
-	printBoard();
+	#printBoard();
 }
 
 sub fallDown{
@@ -316,7 +418,7 @@ sub fallDown{
 }
 
 sub rotate{
-  print "pressed up arrow \n";
+  #print "pressed up arrow \n";
 
   my @currentPatternArray;
   my @newPatternArray;
@@ -401,7 +503,7 @@ sub rotate{
     }
   }
 
-  printBoard();
+  #printBoard();
 }
 
 sub drawLines{
@@ -450,11 +552,14 @@ sub createTile{
 
 sub clearBoard{
 	for my $i (0..$MAX_ROWS-1){
-		my @temp;
+		my @dataRow;
+		my @colorRow;
 		for my $j (0..$MAX_COLS-1){
-			push (@temp, 0);
+			push (@dataRow, 0);
+			push (@colorRow, -1);
 		}
-		push (@board, \@temp);
+		push (@board, \@dataRow);
+		push (@colorInBoard, \@colorRow);
 	}
 }
 
@@ -479,7 +584,7 @@ sub init{
 	$wBase->bind('<KeyPress-Right>', \&moveRight);
 	$wBase->bind('<KeyPress-Down>', \&moveDown);
 	$wBase->bind('<KeyPress-space>', \&fallDown);
-  $wBase->bind('<KeyPress-Up>', \&rotate);
+    $wBase->bind('<KeyPress-Up>', \&rotate);
 	clearBoard();
 
 	# the following lines are for testing
