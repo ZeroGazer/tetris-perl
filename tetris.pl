@@ -2,7 +2,7 @@
 use Tk;
 
 my $MAX_COLS         = 10 ;       # 10 cells wide
-my $MAX_ROWS         = 15 ;       # 15 cells high
+my $MAX_ROWS         = 22 ;       # 15 cells high
 my $TILE_SIZE        = 20;        # size of each tile in pixels 
 
 # Widgets
@@ -247,12 +247,12 @@ sub fallDown{
 }
 
 sub rotate{
-  #print scalar(@currentPattern)-1;
-  #print $currentBlockCoors[3];
+  print "pressed up arrow \n";
+
   my @currentPatternArray;
   my @newPatternArray;
   my @newPattern;
-  for my $i (0..scalar(@currentPattern)-1){
+  for my $i (0..scalar(@currentPattern)-1){ # translate pattern into array
     my $line = $currentPattern[$i];
     my @line = split(//, $line);
       
@@ -264,12 +264,12 @@ sub rotate{
       }
     }
   }
-  for my $i (0..scalar(@currentPattern)-1) {
+  for my $i (0..scalar(@currentPattern)-1) { # rotate the array
     for my $j (0..scalar(@currentPattern)-1){
       $newPatternArray[$i][$j] = $currentPatternArray[scalar(@currentPattern)-1-$j][$i];
     }
   }
-  for my $i (0..scalar(@currentPattern)-1) {
+  for my $i (0..scalar(@currentPattern)-1) { # translate new array into pattern
     my $patternString;
     for my $j (0..scalar(@currentPattern)-1){
       if ($newPatternArray[$i][$j]) {
@@ -414,15 +414,15 @@ sub init{
 	clearBoard();
 
 	# the following lines are for testing
-	createTempTiles(12,0,14,0);
-	createTempTiles(12,1,14,1);
-	createTempTiles(9,2,14,2);
-	createTempTiles(10,3,14,3);
-	createTempTiles(10,4,14,4);
-	createTempTiles(13,5,14,5);
-	createTempTiles(7,6,14,6);
-	createTempTiles(13,8,14,8);
-	createTempTiles(12,9,14,9);
+	createTempTiles(19,0,21,0);
+	createTempTiles(19,1,21,1);
+	createTempTiles(16,2,21,2);
+	createTempTiles(17,3,21,3);
+	createTempTiles(17,4,21,4);
+	createTempTiles(20,5,21,5);
+	createTempTiles(14,6,21,6);
+	createTempTiles(20,8,21,8);
+	createTempTiles(19,9,21,9);
 
 	createTile();
 	
