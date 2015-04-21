@@ -381,7 +381,7 @@ sub rotate{
       my $char = @line[$j];
       if ($char eq "*"){
         # set 1 in @board
-        my $unit = $wGame->createRectangle(($j+$xOffset)*$TILE_SIZE, $i*$TILE_SIZE, ($j+$xOffset+1)*$TILE_SIZE, ($i+1)*$TILE_SIZE, '-fill' => $currentColor);
+        my $unit = $wGame->createRectangle(($j+$xOffset)*$TILE_SIZE, ($i+$yOffset)*$TILE_SIZE, ($j+$xOffset+1)*$TILE_SIZE, ($i+1+$yOffset)*$TILE_SIZE, '-fill' => $currentColor);
         push @currentBlock, $unit;
       }
     }
