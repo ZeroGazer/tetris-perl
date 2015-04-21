@@ -11,6 +11,7 @@ my $wBase;                                # top level widget
 my $wGame;                                # canvas
 
 my $gameover = 0;
+my $playing = 0;
 my $updateInterval = 500;
 
 my @patterns = ([" * ",
@@ -40,19 +41,26 @@ my @currentBlock;
 my @currentPattern;
 my $currentColor;
 my @currentBlockCoors; # x0, y0, x1, y1; 0 : left up; 1 : right bottom (in terms of the grid)
-my @heights;		   # height of each columns; eg if column1 has 5 tiles with 1 space in between, heights[1] = 6; 
 my @board;
 
 sub update{
-	#my $newBlock = $wGame->createRectangle(0, 0, $TILE_SIZE, $TILE_SIZE, '-fill' => '#00FF00', '-tag' => 'block');
-	if (!$gameover){
-		#moveDown();
+	if (!$gameover && $playing){
+		moveDown();
+		if (isHitGround()){ 
+			clearRows();
+			if (isHitSky()) { gameover(); } # gameover when hitting both ground and sky
+			else			{ createTile(); }
+		}
 		$wBase->after($updateInterval, \&update);
 	}
 }
 
 sub start{
-	$wBase->after($updateInterval, \&update);
+	if (!$playing){	
+		createTile();
+		$wBase->after($updateInterval, \&update);
+		$playing = 1;
+	}
 }
 
 sub createScreen{
@@ -66,7 +74,6 @@ sub createScreen{
                               '-command' => \&start,
                               );
     my $wQuitBitton = $wBase->Button('-text' => 'Quit',
-#               '-command' => sub {$wBase->withdraw();exit(0)}
                                 '-command' => sub {exit(0)}
                                 );
     $wGame->pack();
@@ -74,8 +81,67 @@ sub createScreen{
     $wQuitBitton->pack('-side'=> 'right', '-fill' => 'y', '-expand' => 'y');
 }
 
+sub clearRow{
+	my $delRow = $_[0];
+	# delete the row first
+	for my $i (0..$MAX_COLS-1){
+		${$board[$delRow]}[$i] = 0;
+	}
+	# move the tiles one unit below
+	for my $col (0..$MAX_COLS-1){
+		for my $row (1..$delRow){
+			my $adjustedRow = $row = $delRow - $row;
+			# move the data
+			${$board[$adjustedRow+1]}[$col] = ${$board[$adjustedRow]}[$col];
+			# move the tile visually 
+			# TODO
+		}
+	}
+}
+
+sub isFullRow{
+	my $count = 0;
+	for my $col (0..$MAX_COLS-1){
+		if (${$board[$_[0]]}[$col]) { $count++; }
+	}
+	if ($count == $MAX_COLS) { return 1; }
+	else					 { return 0; }
+}
+
+sub clearRows{
+	for my $row ($currentBlockCoors[1]..$currentBlockCoors[3]){
+		if (isFullRow($row)) { clearRow($row); }
+	}
+}
+
+sub isHitSky{
+	if ($currentBlockCoors[1] == 0) { return 1; }
+	else 							{ return 0; }
+}
+
+sub isHitGround{
+	my $hit = 0;
+	if ($currentBlockCoors[3] == $MAX_ROWS-1){ return 1; }
+	else{
+		my $lastRow = scalar(@currentPattern)-1;
+		my @line = split(//, $currentPattern[$lastRow]);
+
+		my $xOffset = $currentBlockCoors[0];
+		my $yOffset = $currentBlockCoors[1];
+		for my $i (0..length($currentPattern[0])-1){
+			if (${$board[$lastRow+$yOffset+1]}[$i+$xOffset]){ return 1; }
+		}
+		return 0; 
+	}
+}
+
+sub gameover{
+	$gameover = 1;
+	$playing = 0;
+	print "gameover!";
+}
+
 sub moveRight{
-	print "pressed right arrow : ($currentBlockCoors[2] < $MAX_COLS)?\n";
 	
 	if ($currentBlockCoors[2] < $MAX_COLS-1){
 		
@@ -129,11 +195,10 @@ sub moveRight{
 			}
 		}
 	}
-	printBoard();
+	#printBoard();
 }
 
 sub moveLeft{
-	print "pressed left arrow : ($currentBlockCoors[0] > 0)?\n";
 	
 	if ($currentBlockCoors[0] > 0){
 		
@@ -185,11 +250,10 @@ sub moveLeft{
 			}
 		}
 	}
-	printBoard();
+	#printBoard();
 }
 
 sub moveDown{
-	print "pressed down arrow\n";
 	
 	if ($currentBlockCoors[3] < $MAX_ROWS-1){
 	
@@ -246,7 +310,9 @@ sub moveDown{
 }
 
 sub fallDown{
-	print "pressed spacebar \n";
+	for my $i (1..$MAX_ROWS){
+		moveDown();
+	}
 }
 
 sub rotate{
@@ -360,7 +426,8 @@ sub createTile{
     $currentColor = $color;
     my $pattern = $patterns[int(rand (scalar(@patterns)))];
 	my $xOffset, my $height = scalar(@$pattern), my $width;
-	
+	@currentBlock = ();
+
 	for my $i (0..scalar(@$pattern)-1){
 		my $line = @$pattern[$i];
 		my @line = split (//, $line);
@@ -370,14 +437,13 @@ sub createTile{
 		for my $j (0..scalar(@line)-1){
 			my $char = @line[$j];
 			if ($char eq "*"){
-				# set 1 in @board
 				my $unit = $wGame->createRectangle(($j+$xOffset)*$TILE_SIZE, $i*$TILE_SIZE, ($j+$xOffset+1)*$TILE_SIZE, ($i+1)*$TILE_SIZE, '-fill' => $color);
 				push @currentBlock, $unit;
 				${$board[$i]}[$j+$xOffset] = 1;
 			}
 		}
 	}
-	printBoard();
+	#printBoard();
 	@currentPattern = @$pattern;
 	@currentBlockCoors = ($xOffset, 0, $width+$xOffset-1, $height-1);
 }
@@ -426,10 +492,6 @@ sub init{
 	createTempTiles(14,6,21,6);
 	createTempTiles(20,8,21,8);
 	createTempTiles(19,9,21,9);
-
-	createTile();
-	
-	start();
 }
 
 init();
