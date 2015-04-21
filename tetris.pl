@@ -1,4 +1,4 @@
-use strict;
+﻿use strict;
 use Tk;
 
 my $MAX_COLS         = 10 ;       # 10 cells wide
@@ -14,20 +14,28 @@ my $gameover = 0;
 my $updateInterval = 500;
 
 my @patterns = ([" * ",
-                 "***"],
-                ["****"],
+                 "***",
+                 "   "],
+                ["    ",
+                 "****",
+                 "    ",
+                 "    "],
                 ["  *",
-                 "***"],
+                 "***",
+                 "   "],
                 ["*  ",
-                 "***"],
+                 "***",
+                 "   "],
                 [" **",
-                 "** "],
+                 "** ",
+                 "   "],
                 ["**",
                  "**"]);
 my @colors = qw(#0000FF #00FF00 #FF0000 #FFFF00 #FF00FF #00FFFF);
 
 my @currentBlock;
 my @currentPattern;
+my $currentColor;
 my @currentBlockCoors; # x0, y0, x1, y1; 0 : left up; 1 : right bottom (in terms of the grid)
 my @heights;		   # height of each columns; eg if column1 has 5 tiles with 1 space in between, heights[1] = 6; 
 my @board;
@@ -238,6 +246,95 @@ sub fallDown{
 	print "pressed spacebar \n";
 }
 
+sub rotate{
+  #print scalar(@currentPattern)-1;
+  #print $currentBlockCoors[3];
+  my @currentPatternArray;
+  my @newPatternArray;
+  my @newPattern;
+  for my $i (0..scalar(@currentPattern)-1){
+    my $line = $currentPattern[$i];
+    my @line = split(//, $line);
+      
+    for my $j (0..length($line)-1){
+      if ($line[$j] eq "*") {
+        $currentPatternArray[$i][$j] = 1;
+      } else {
+        $currentPatternArray[$i][$j] = 0;
+      }
+    }
+  }
+  for my $i (0..scalar(@currentPattern)-1) {
+    for my $j (0..scalar(@currentPattern)-1){
+      $newPatternArray[$i][$j] = $currentPatternArray[scalar(@currentPattern)-1-$j][$i];
+    }
+  }
+  for my $i (0..scalar(@currentPattern)-1) {
+    my $patternString;
+    for my $j (0..scalar(@currentPattern)-1){
+      if ($newPatternArray[$i][$j]) {
+          $patternString = $patternString . "*";
+      } else {
+          $patternString = $patternString . " ";
+      }
+      @newPattern[$i] = $patternString;
+    }
+  }
+
+  # change @board data to 0
+   for my $i (0..scalar(@currentPattern)-1){
+    my $line = $currentPattern[$i];
+    my @line = split(//, $line);
+    
+    my $xOffset = $currentBlockCoors[0];
+    my $yOffset = $currentBlockCoors[1];
+    for my $j (0..length($line)-1){
+      if ($line[$j] eq "*") {
+        ${$board[$i+$yOffset]}[$xOffset+$j] = 0;
+      }
+    }
+  }
+  
+  # delete the tile
+  foreach my $unit (@currentBlock){
+    $wGame->delete($unit);
+  }
+  
+  @currentPattern = @newPattern;
+  # create the tile
+  for my $i (0..scalar(@currentPattern)-1){
+    my $line = $currentPattern[$i];
+    my @line = split (//, $line);
+  
+    my $xOffset = $currentBlockCoors[0];
+    my $yOffset = $currentBlockCoors[1];
+    for my $j (0..scalar(@line)-1){
+      my $char = @line[$j];
+      if ($char eq "*"){
+        # set 1 in @board
+        my $unit = $wGame->createRectangle(($j+$xOffset)*$TILE_SIZE, $i*$TILE_SIZE, ($j+$xOffset+1)*$TILE_SIZE, ($i+1)*$TILE_SIZE, '-fill' => $currentColor);
+        push @currentBlock, $unit;
+      }
+    }
+  }
+  
+  # change @board data to 1
+  for my $i (0..scalar(@currentPattern)-1){
+    my $line = $currentPattern[$i];
+    my @line = split(//, $line);
+  
+    my $xOffset = $currentBlockCoors[0];
+    my $yOffset = $currentBlockCoors[1];
+    for my $j (0..length($line)-1){
+      if ($line[$j] eq "*") {
+        ${$board[$i+$yOffset]}[$xOffset+$j] = 1;
+      }
+    }
+  }
+
+  printBoard();
+}
+
 sub drawLines{
 	for my $i (0 .. $MAX_ROWS){
 		$wGame->createLine(0, $i*$TILE_SIZE, $MAX_COLS*$TILE_SIZE, $i*$TILE_SIZE, '-fill' => 'black');}
@@ -257,6 +354,7 @@ sub printBoard{
 
 sub createTile{
     my $color   = $colors[int(rand (scalar (@colors)))];
+    $currentColor = $color;
     my $pattern = $patterns[int(rand (scalar(@patterns)))];
 	my $xOffset, my $height = scalar(@$pattern), my $width;
 	
@@ -312,6 +410,7 @@ sub init{
 	$wBase->bind('<KeyPress-Right>', \&moveRight);
 	$wBase->bind('<KeyPress-Down>', \&moveDown);
 	$wBase->bind('<KeyPress-space>', \&fallDown);
+  $wBase->bind('<KeyPress-Up>', \&rotate);
 	clearBoard();
 
 	# the following lines are for testing
