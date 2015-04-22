@@ -139,14 +139,11 @@ sub clearRow{
 	for my $row (0..$MAX_ROWS-1){
 		for my $col (0..$MAX_COLS-1){
 			if (${$board[$row]}[$col]){
-				print "Y ";
 				my $color = $colors[${$colorInBoard[$row]}[$col]];
 				my $block = $wGame->createRectangle($col*$TILE_SIZE, $row*$TILE_SIZE, ($col+1)*$TILE_SIZE, ($row+1)*$TILE_SIZE, '-fill' => $color);
 				push (@fixedBlock, $block);
 			}
-			else {print "_ ";}
 		}
-		print "\n";
 	}
 }
 
@@ -435,7 +432,7 @@ sub moveDown{
 			}
 		}
 	}
-	printBoard();
+	#printBoard();
 }
 
 sub fallDown{
@@ -479,6 +476,8 @@ sub rotate{
     }
   }
 
+  my @tempCoorsArray;
+
   # change @board data to 0
    for my $i (0..scalar(@currentPattern)-1){
     my $line = $currentPattern[$i];
@@ -488,11 +487,37 @@ sub rotate{
     my $yOffset = $currentBlockCoors[1];
     for my $j (0..length($line)-1){
       if ($line[$j] eq "*") {
+      	my $coor = ($i+$yOffset) * 100 + $xOffset+$j;
+      	push (@tempCoorsArray, $coor);
         ${$board[$i+$yOffset]}[$xOffset+$j] = 0;
       }
     }
   }
   
+  # check if there is collision
+  for my $i (0..scalar(@newPattern)-1){
+    my $line = $newPattern[$i];
+    my @line = split(//, $line);
+  
+    my $xOffset = $currentBlockCoors[0];
+    my $yOffset = $currentBlockCoors[1];
+    for my $j (0..length($line)-1){
+      if ($line[$j] eq "*") {
+        if (${$board[$i+$yOffset]}[$xOffset+$j] 	# collision 
+        	|| ($i+$yOffset<0 || $i+$yOffset>$MAX_ROWS-1 || $xOffset+$j<0 || $xOffset+$j>$MAX_COLS-1)) {  # out of range
+        	# restore original state
+        	foreach my $coor (@tempCoorsArray){
+        		use integer;
+        		my $row = $coor / 100;
+        		my $col = $coor - $row * 100;
+        		${$board[$row]}[$col] = 1;
+        	}
+        	return; 
+        }
+      }
+    }
+  }
+
   # delete the tile
   foreach my $unit (@currentBlock){
     $wGame->delete($unit);
