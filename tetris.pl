@@ -187,15 +187,21 @@ sub isHitGround{
 
 	if ($botMostY == $MAX_ROWS-1){ return 1; }
 	else{
-		my $lastRow = scalar(@currentPattern)-1;
-		my @line = split(//, $currentPattern[$lastRow]);
-
-		my $xOffset = $currentBlockCoors[0];
-		my $yOffset = $currentBlockCoors[1];
 		for my $i (0..length($currentPattern[0])-1){
-			if (${$board[$lastRow+$yOffset+1]}[$i+$xOffset]){ return 1; }
+			for my $j (1..scalar(@currentPattern)){
+				my $k = scalar(@currentPattern)-$j;
+				my $line = $currentPattern[$k];
+				my @line = split(//, $line);
+
+				my $xOffset = $currentBlockCoors[0];
+				my $yOffset = $currentBlockCoors[1];
+				if ($line[$i] eq "*"){
+					if (${$board[$k+$yOffset+1]}[$i+$xOffset]) {return 1;}
+					last;
+				}
+			}
 		}
-		return 0; 
+    return 0;
 	}
 }
 
@@ -343,7 +349,7 @@ sub moveLeft{
 }
 
 sub moveDown{
-	
+
 	my $botMostY = $currentBlockCoors[3];
 	for my $i (1..scalar(@currentPattern)){
 		my $k = scalar(@currentPattern) - $i;
@@ -408,7 +414,7 @@ sub moveDown{
 			}
 		}
 	}
-	#printBoard();
+	printBoard();
 }
 
 sub fallDown{
