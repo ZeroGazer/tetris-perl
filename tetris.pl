@@ -47,7 +47,6 @@ my @colorInBoard; # -1:no color, 0:color0, ...
 
 sub update{
 	if (!$gameover && $playing){
-		moveDown();
 		if (isHitGround()){ 
 			rmbColor();
 
@@ -61,6 +60,7 @@ sub update{
 			if (isHitSky()) { gameover(); } # gameover when hitting both ground and sky
 			else			{ createTile(); }
 		}
+    moveDown();
 		$wBase->after($updateInterval, \&update);
 	}
 }
