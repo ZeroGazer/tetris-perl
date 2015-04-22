@@ -35,7 +35,7 @@ my @patterns = ([" * ",
                  "   "],
                 ["**",
                  "**"]);
-my @colors = qw(#0000FF #00FF00 #FF0000 #FFFF00 #FF00FF #00FFFF);
+my @colors = qw(#BA55D3 #8EE5EE #FFA500 #0000FF #00FF00 #FF0000 #FFFF00);
 
 my @currentBlock;
 my @currentPattern;
@@ -530,9 +530,10 @@ sub printBoard{
 }
 
 sub createTile{
-    my $color   = $colors[int(rand (scalar (@colors)))];
+    my $randomIndex = int(rand (scalar (@patterns)));
+    my $color   = $colors[$randomIndex];
     $currentColor = $color;
-    my $pattern = $patterns[int(rand (scalar(@patterns)))];
+    my $pattern = $patterns[$randomIndex];
 	my $xOffset, my $height = scalar(@$pattern), my $width;
 	@currentBlock = ();
 
