@@ -160,9 +160,15 @@ sub isFullRow{
 }
 
 sub clearRows{
-	for my $row ($currentBlockCoors[1]..$currentBlockCoors[3]){
-		if (isFullRow($row)) { clearRow($row); }
-	}
+  if (isFullRow($currentBlockCoors[3])) {
+    clearRow($MAX_ROWS-1);
+    while(1){
+      if (isFullRow($MAX_ROWS-1)) {
+        clearRow($MAX_ROWS-1);
+        next;
+      } else { last; }
+    }
+	} else { return; }
 }
 
 sub isHitSky{
