@@ -157,30 +157,9 @@ sub isFullRow{
 }
 
 sub clearRows{
-  
-  my $botMostY = $currentBlockCoors[3];
-	for my $i (1..scalar(@currentPattern)){
-		my $k = scalar(@currentPattern) - $i;
-		my @line = split(//, $currentPattern[$k]);
-		my $emptyCol = 1;
-
-		for my $j (0..scalar(@line)-1){
-			if ($line[$j] eq "*"){ $emptyCol = 0; last; }
-		}
-		if (!$emptyCol){ last; }
-		$botMostY--;
+	for my $row (0..$MAX_ROWS-1){
+		if (isFullRow($row)){ clearRow($row); }
 	}
-  
-  if (isFullRow($botMostY)) {
-    if (isFullRow($MAX_ROWS-1)) {
-      while(1){
-        if (isFullRow($MAX_ROWS-1)) {
-          clearRow($MAX_ROWS-1);
-          next;
-        } else { last; }
-      }
-    } else { clearRow($MAX_ROWS-1); }
-	} else { return; }
 }
 
 sub isHitSky{
