@@ -473,29 +473,47 @@ sub rotate{
     }
   }
   
-  # check if there is collision
-  for my $i (0..scalar(@newPattern)-1){
-    my $line = $newPattern[$i];
-    my @line = split(//, $line);
-  
-    my $xOffset = $currentBlockCoors[0];
-    my $yOffset = $currentBlockCoors[1];
-    for my $j (0..length($line)-1){
-      if ($line[$j] eq "*") {
-        if (${$board[$i+$yOffset]}[$xOffset+$j] 	# collision 
-        	|| ($i+$yOffset<0 || $i+$yOffset>$MAX_ROWS-1 || $xOffset+$j<0 || $xOffset+$j>$MAX_COLS-1)) {  # out of range
-        	# restore original state
-        	foreach my $coor (@tempCoorsArray){
-        		use integer;
-        		my $row = $coor / 100;
-        		my $col = $coor - $row * 100;
-        		${$board[$row]}[$col] = 1;
-        	}
-        	return; 
-        }
-      }
-    }
-  }
+	my $displacement = 0; # -1:left, 0:stay, 1:right
+
+	# check if there is collision
+	for my $i (0..scalar(@newPattern)-1){
+		my $line = $newPattern[$i];
+		my @line = split(//, $line);
+
+		my $xOffset = $currentBlockCoors[0];
+		my $yOffset = $currentBlockCoors[1];
+		for my $j (0..length($line)-1){
+
+			if ($line[$j] eq "*") {
+				if ( (${$board[$i+$yOffset]}[$xOffset+$j]) 				# collision
+					|| ($i+$yOffset<0 || $i+$yOffset>$MAX_ROWS-1) ) {	# out of range (in terms of y coor)
+					# restore original state
+					foreach my $coor (@tempCoorsArray){
+						use integer;
+						my $row = $coor / 100;
+						my $col = $coor - $row * 100;
+						${$board[$row]}[$col] = 1;
+					}
+					return; 
+				}	
+				else {
+					if ($xOffset+$j<0 || $xOffset+$j>$MAX_COLS-1){ # out of range (in terms of x-coor)
+						if ($xOffset+$j<0) { $displacement += 1; } # crash left boundary -> move right one cell
+						else { $displacement -= 1; }  			  # crash right boundary -> move left one cell
+					}
+				}
+			}
+		}
+	}
+
+	if ($displacement != 0){ # not 0 -> need to displace
+		if ($currentColor eq $colors[2]){ # lazy, only this is exception to the above counting method
+			if ($displacement > 0) { $displacement = 1; }
+			else { $displacement = -1; }
+		}
+		$currentBlockCoors[0] += $displacement;
+		$currentBlockCoors[2] += $displacement;
+	}
 
   # delete the tile
   foreach my $unit (@currentBlock){
@@ -616,7 +634,7 @@ sub init{
 	$wBase->bind('<KeyPress-Right>', \&moveRight);
 	$wBase->bind('<KeyPress-Down>', \&moveDown);
 	$wBase->bind('<KeyPress-space>', \&fallDown);
-    $wBase->bind('<KeyPress-Up>', \&rotate);
+    	$wBase->bind('<KeyPress-Up>', \&rotate);
 	clearBoard();
 
 	# the following lines are for testing
