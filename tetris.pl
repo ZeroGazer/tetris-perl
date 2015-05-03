@@ -9,6 +9,7 @@ my $TILE_SIZE        = 20;        # size of each tile in pixels
 my $wStartButton;                         # start button widget
 my $wBase;                                # top level widget
 my $wGame;                                # canvas
+my $wScore;
 
 my $level = 1;
 my $score = 0;
@@ -79,11 +80,13 @@ sub start{
 sub createScreen{
     $wBase = MainWindow->new(-title => 'Tetris - Perl/Tk');
 
-    $wGame = $wBase->Canvas('-width'  => $MAX_COLS * $TILE_SIZE,
+    $wGame = $wBase->Canvas('-width'  => ($MAX_COLS+6) * $TILE_SIZE,
                              '-height' => $MAX_ROWS  * $TILE_SIZE,
                              '-border' => 1,
                              '-relief' => 'ridge');			
-    $wStartButton = $wBase->Button('-text' => 'Start',
+    $wScore = $wGame->createText(($MAX_COLS+2)*$TILE_SIZE, 3*$TILE_SIZE, -text=>"Score : $score", -justify=>"left");
+    $wGame->createText(($MAX_COLS+2)*$TILE_SIZE, 5*$TILE_SIZE, -text=>"Next Tetrominoe :", -justify=>"left");
+    my $wStartButton = $wBase->Button('-text' => 'Start',
                               '-command' => \&start,
                               );
     my $wQuitBitton = $wBase->Button('-text' => 'Quit',
@@ -175,7 +178,10 @@ sub calculateScore{
 		else { 
 			if ($count == 3) { $score += (600*$level); }
 			else { if ($count == 4) { $score += (1000*$level); } } } }
-	#print "score is now : $score\n";
+
+	$wGame->delete($wScore);
+	$wScore = $wGame->createText(($MAX_COLS+2)*$TILE_SIZE, 3*$TILE_SIZE, -text=>"Score : $score", -justify=>"left");
+
 	adjustDifficulty();
 }
 
@@ -634,6 +640,8 @@ sub createTile{
 	@currentPattern = @$pattern;
 	@currentBlockCoors = ($xOffset, 0, $width+$xOffset-1, $height-1);
 }
+
+
 
 sub clearBoard{
 	for my $i (0..$MAX_ROWS-1){
