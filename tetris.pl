@@ -282,7 +282,7 @@ sub gameover{
     my $min = 9999999;
     $_ < $min and $min = $_ for values %history;
 
-    if ($score > $min){
+    if ($score > $min || !(-e "score.txt")){
         #my $wFinish = MainWindow->new(-title => 'Tetris - Perl/Tk');
         #my $name;
         #my $entry = $wFinish->Entry(-textvariable => \$name)->pack;
