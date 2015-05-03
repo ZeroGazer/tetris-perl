@@ -17,6 +17,7 @@ my $gameover = 0;
 my $playing = 0;
 my $basicUpdateInterval = 500;
 my $updateInterval = $basicUpdateInterval;
+my %history;
 
 my @patterns = ([" * ",
                  "***",
@@ -41,9 +42,7 @@ my @patterns = ([" * ",
                  "**"]);
 my @colors = qw(#BA55D3 #8EE5EE #FFA500 #0000FF #00FF00 #FF0000 #FFFF00);
 
-my $nextIndex;
 my @currentBlock;
-my @nextBlock;
 my @currentPattern;
 my $currentColor;
 my @currentBlockCoors; # x0, y0, x1, y1; 0 : left up; 1 : right bottom (in terms of the grid)
@@ -52,50 +51,68 @@ my @board;
 my @colorInBoard; # -1:no color, 0:color0, ...
 
 sub update{
-	if (!$gameover && $playing){
-		if (isHitGround()){ 
-			rmbColor();
+    if (!$gameover && $playing){
+        if (isHitGround()){ 
+            rmbColor();
 
-			# reset some data
-			foreach my $block (@currentBlock){
-				push (@fixedBlock, $block);
-			}
-			@currentBlock = ();
+            # reset some data
+            foreach my $block (@currentBlock){
+                push (@fixedBlock, $block);
+            }
+            @currentBlock = ();
 
-			clearRows();
-			if (isHitSky()) { gameover(); } # gameover when hitting both ground and sky
-			else {
-				createTile();
-				createNextTile();
-			}
-		}
+            clearRows();
+            if (isHitSky()) { gameover(); } # gameover when hitting both ground and sky
+            else            { createTile(); }
+        }
     moveDown();
-		$wBase->after($updateInterval, \&update);
-	}
+        $wBase->after($updateInterval, \&update);
+    }
 }
 
 sub start{
-	if (!$playing){
-		createNextTile();
-		createTile();
-		$wBase->after($updateInterval, \&update);
-		$playing = 1;
-	}
+    if (!$playing){    
+        createTile();
+        $wBase->after($updateInterval, \&update);
+        $playing = 1;
+    }
 }
 
 sub createScreen{
     $wBase = MainWindow->new(-title => 'Tetris - Perl/Tk');
 
-    $wGame = $wBase->Canvas('-width'  => ($MAX_COLS+6) * $TILE_SIZE,
+    $wGame = $wBase->Canvas('-width'  => ($MAX_COLS+7) * $TILE_SIZE,
                              '-height' => $MAX_ROWS  * $TILE_SIZE,
                              '-border' => 1,
-                             '-relief' => 'ridge');	
+                             '-relief' => 'ridge');    
     $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"w", -text=>"Score :",);
     $wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
     $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 5*$TILE_SIZE, -anchor=>"w", -text=>"Next Tetrominoe :");
-    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 11*$TILE_SIZE, -anchor=>"w", -text=>"Rank :",);
+
+    # history
+    if (-e "score.txt"){
+        open (INFILE, "<score.txt");
+        while (my $line = <INFILE>){
+            chomp ($line);
+            my @line = split(/\t/, $line);
+            $history{$line[0]} = $line[1];
+        }
+
+        my $count = 0;
+        $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 11*$TILE_SIZE, -anchor=>"w", -text=>"Rank :");
+        $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (12+$count)*$TILE_SIZE, -anchor=>"w", -text=>"Name");   # name
+        $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (12+$count)*$TILE_SIZE, -anchor=>"e", -text=>"Score");   # score
+        $wGame->createLine(($MAX_COLS+1)*$TILE_SIZE, (12.5+$count)*$TILE_SIZE, ($MAX_COLS+6)*$TILE_SIZE, (12.5+$count)*$TILE_SIZE);
+        foreach my $key (sort { $history{$b} <=> $history{$a} or $b cmp $a } keys %history){
+            # print "$key -> $history{$key}\n";
+            $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (13+$count)*$TILE_SIZE, -anchor=>"w", -text=>"$key");   # name
+            $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (13+$count)*$TILE_SIZE, -anchor=>"e", -text=>"$history{$key}");   # score
+            $count ++;
+        }
+    }
+
     my $wStartButton = $wBase->Button('-text' => 'Start',
-                              '-command' => \&start,
+                              '-command' => \&start
                               );
     my $wQuitBitton = $wBase->Button('-text' => 'Quit',
                                 '-command' => sub {exit(0)}
@@ -107,365 +124,393 @@ sub createScreen{
 
 sub rmbColor{
 
-	my $colorIndex;
-	for my $i (0..scalar(@colors)-1){
-		if ($colors[$i] eq $currentColor) {$colorIndex = $i;}
-	}
+    my $colorIndex;
+    for my $i (0..scalar(@colors)-1){
+        if ($colors[$i] eq $currentColor) {$colorIndex = $i;}
+    }
 
-	my $xOffset = $currentBlockCoors[0];
-	my $yOffset = $currentBlockCoors[1];
-	for my $i (0..scalar(@currentPattern)-1){
-		my @line = split(//, $currentPattern[$i]);
+    my $xOffset = $currentBlockCoors[0];
+    my $yOffset = $currentBlockCoors[1];
+    for my $i (0..scalar(@currentPattern)-1){
+        my @line = split(//, $currentPattern[$i]);
 
-		for my $j (0..scalar(@line)-1){
-			if ($line[$j] eq "*"){
-				${$colorInBoard[$yOffset+$i]}[$xOffset+$j] = $colorIndex;
-			}
-		}
-	}
+        for my $j (0..scalar(@line)-1){
+            if ($line[$j] eq "*"){
+                ${$colorInBoard[$yOffset+$i]}[$xOffset+$j] = $colorIndex;
+            }
+        }
+    }
 }
 
 sub clearRow{
-	$wBase->after(200);
+    $wBase->after(200);
 
-	my $delRow = $_[0];
+    my $delRow = $_[0];
 
-	# delete the row first
-	for my $i (0..$MAX_COLS-1){
-		${$board[$delRow]}[$i] = 0;	
-		${$colorInBoard[$delRow]}[$i] = -1;
-	}
-	
-	# move the tiles one unit below
-	for my $col (0..$MAX_COLS-1){
-		for my $row (1..$delRow){
-			my $adjustedRow = $row = $delRow - $row;
-			${$board[$adjustedRow+1]}[$col] = ${$board[$adjustedRow]}[$col]; # move the data
-			${$colorInBoard[$adjustedRow+1]}[$col] = ${$colorInBoard[$adjustedRow]}[$col]; # move the data
-		}
-	}
+    # delete the row first
+    for my $i (0..$MAX_COLS-1){
+        ${$board[$delRow]}[$i] = 0;    
+        ${$colorInBoard[$delRow]}[$i] = -1;
+    }
+    
+    # move the tiles one unit below
+    for my $col (0..$MAX_COLS-1){
+        for my $row (1..$delRow){
+            my $adjustedRow = $row = $delRow - $row;
+            ${$board[$adjustedRow+1]}[$col] = ${$board[$adjustedRow]}[$col]; # move the data
+            ${$colorInBoard[$adjustedRow+1]}[$col] = ${$colorInBoard[$adjustedRow]}[$col]; # move the data
+        }
+    }
 
-	for my $block (@fixedBlock){
-		$wGame->delete($block);
-	}
-	@fixedBlock = ();
+    for my $block (@fixedBlock){
+        $wGame->delete($block);
+    }
+    @fixedBlock = ();
 
-	for my $row (0..$MAX_ROWS-1){
-		for my $col (0..$MAX_COLS-1){
-			if (${$board[$row]}[$col]){
-				my $color = $colors[${$colorInBoard[$row]}[$col]];
-				my $block = $wGame->createRectangle($col*$TILE_SIZE, $row*$TILE_SIZE, ($col+1)*$TILE_SIZE, ($row+1)*$TILE_SIZE, '-fill' => $color);
-				push (@fixedBlock, $block);
-			}
-		}
-	}
+    for my $row (0..$MAX_ROWS-1){
+        for my $col (0..$MAX_COLS-1){
+            if (${$board[$row]}[$col]){
+                my $color = $colors[${$colorInBoard[$row]}[$col]];
+                my $block = $wGame->createRectangle($col*$TILE_SIZE, $row*$TILE_SIZE, ($col+1)*$TILE_SIZE, ($row+1)*$TILE_SIZE, '-fill' => $color);
+                push (@fixedBlock, $block);
+            }
+        }
+    }
 }
 
 sub isFullRow{
-	my $count = 0;
-	for my $col (0..$MAX_COLS-1){
-		if (${$board[$_[0]]}[$col]) { $count++; }
-	}
-	if ($count == $MAX_COLS) { return 1; }
-	else					 { return 0; }
+    my $count = 0;
+    for my $col (0..$MAX_COLS-1){
+        if (${$board[$_[0]]}[$col]) { $count++; }
+    }
+    if ($count == $MAX_COLS) { return 1; }
+    else                     { return 0; }
 }
 
 sub clearRows{
-	my $count = 0;
-	for my $row (0..$MAX_ROWS-1){
-		if (isFullRow($row)){ clearRow($row); $count++; }
-	}
-	if ($count != 0) { calculateScore($count); }
+    my $count = 0;
+    for my $row (0..$MAX_ROWS-1){
+        if (isFullRow($row)){ clearRow($row); $count++; }
+    }
+    if ($count != 0) { calculateScore($count); }
 }
 
 sub calculateScore{
-	my $count = $_[0];
-	if ($count == 1){ $score += (100*$level); }
-	else { 
-		if ($count == 2) { $score += (300*$level); }
-		else { 
-			if ($count == 3) { $score += (600*$level); }
-			else { if ($count == 4) { $score += (1000*$level); } } } }
+    my $count = $_[0];
+    if ($count == 1){ $score += (100*$level); }
+    else { 
+        if ($count == 2) { $score += (300*$level); }
+        else { 
+            if ($count == 3) { $score += (600*$level); }
+            else { if ($count == 4) { $score += (1000*$level); } } } }
 
-	$wGame->delete($wScore);
-	$wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
+    $wGame->delete($wScore);
+    $wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
 
-	adjustDifficulty();
+    adjustDifficulty();
 }
 
 sub adjustDifficulty{
-	my $minus = 50;
-	my @interval = (1000, 2500, 5000, 9000, 15000, 30000); 
-	if ($updateInterval > 200) {
-		for my $i (1..scalar(@interval)){
-			my $k = scalar(@interval)-$i; # $k = len-1, len-2, ..., 1, 0
-			if ($score >= $interval[$k]){
-				$updateInterval = $basicUpdateInterval - $minus * ($k+1);
-				$level = $k+1;
-				last;
-			}
-		}
-		#print "update interval is now : $updateInterval\n";
-		#print "level is now : $level\n\n";
-	}
+    my $minus = 50;
+    my @interval = (1000, 2500, 5000, 9000, 15000, 30000); 
+    if ($updateInterval > 200) {
+        for my $i (1..scalar(@interval)){
+            my $k = scalar(@interval)-$i; # $k = len-1, len-2, ..., 1, 0
+            if ($score >= $interval[$k]){
+                $updateInterval = $basicUpdateInterval - $minus * ($k+1);
+                $level = $k+1;
+                last;
+            }
+        }
+        #print "update interval is now : $updateInterval\n";
+        #print "level is now : $level\n\n";
+    }
 }
 
 sub isHitSky{
-	if ($currentBlockCoors[1] == 0) { return 1; }
-	else 							{ return 0; }
+    if ($currentBlockCoors[1] == 0) { return 1; }
+    else                             { return 0; }
 }
 
 sub isHitGround{
-	
-	my $botMostY = $currentBlockCoors[3];
-	for my $i (1..scalar(@currentPattern)){
-		my $k = scalar(@currentPattern) - $i;
-		my @line = split(//, $currentPattern[$k]);
-		my $emptyCol = 1;
+    
+    my $botMostY = $currentBlockCoors[3];
+    for my $i (1..scalar(@currentPattern)){
+        my $k = scalar(@currentPattern) - $i;
+        my @line = split(//, $currentPattern[$k]);
+        my $emptyCol = 1;
 
-		for my $j (0..scalar(@line)-1){
-			if ($line[$j] eq "*"){ $emptyCol = 0; last; }
-		}
-		if (!$emptyCol){ last; }
-		$botMostY--;
-	}
+        for my $j (0..scalar(@line)-1){
+            if ($line[$j] eq "*"){ $emptyCol = 0; last; }
+        }
+        if (!$emptyCol){ last; }
+        $botMostY--;
+    }
 
-	if ($botMostY == $MAX_ROWS-1){ return 1; }
-	else{
-		for my $i (0..length($currentPattern[0])-1){
-			for my $j (1..scalar(@currentPattern)){
-				my $k = scalar(@currentPattern)-$j;
-				my $line = $currentPattern[$k];
-				my @line = split(//, $line);
+    if ($botMostY == $MAX_ROWS-1){ return 1; }
+    else{
+        for my $i (0..length($currentPattern[0])-1){
+            for my $j (1..scalar(@currentPattern)){
+                my $k = scalar(@currentPattern)-$j;
+                my $line = $currentPattern[$k];
+                my @line = split(//, $line);
 
-				my $xOffset = $currentBlockCoors[0];
-				my $yOffset = $currentBlockCoors[1];
-				if ($line[$i] eq "*"){
-					if (${$board[$k+$yOffset+1]}[$i+$xOffset]) {return 1;}
-					last;
-				}
-			}
-		}
+                my $xOffset = $currentBlockCoors[0];
+                my $yOffset = $currentBlockCoors[1];
+                if ($line[$i] eq "*"){
+                    if (${$board[$k+$yOffset+1]}[$i+$xOffset]) {return 1;}
+                    last;
+                }
+            }
+        }
     return 0;
-	}
+    }
 }
 
 sub gameover{
-	$gameover = 1;
-	$playing = 0;
-	print "gameover!";
+    $gameover = 1;
+    $playing = 0;
+    print "gameover!\n";
+
+    my $min = 9999999;
+    $_ < $min and $min = $_ for values %history;
+
+    if ($score > $min){
+        #my $wFinish = MainWindow->new(-title => 'Tetris - Perl/Tk');
+        #my $name;
+        #my $entry = $wFinish->Entry(-textvariable => \$name)->pack;
+        #$entry->bind('<Return>', sub{
+        #        print "input name : $name";
+        #        $wFinish
+        #    });
+        #entry->focus;
+
+        print "You are Top 5! Please enter your name : ";
+        my $name = <STDIN>;
+        chomp($name);
+        $history{$name} = $score;
+        open(OUTFILE, ">score.txt");
+        my $count = 0;
+        foreach my $key (sort { $history{$b} <=> $history{$a} or $b cmp $a } keys %history) {
+            print OUTFILE "$key\t$history{$key}";
+            $count ++;
+            if ($count >= 5) { last; }
+            else { print OUTFILE "\n"; }
+        }
+        close(OUTFILE);
+    }
 }
 
 sub moveRight{
 
-	my $rightMostX = $currentBlockCoors[2];
-	for my $i (1..length($currentPattern[0])){
-		my $k = length($currentPattern[0]) - $i;
-		my $emptyCol = 1;
+    my $rightMostX = $currentBlockCoors[2];
+    for my $i (1..length($currentPattern[0])){
+        my $k = length($currentPattern[0]) - $i;
+        my $emptyCol = 1;
 
-		for my $j (0..scalar(@currentPattern)-1){
-			my @line = split(//, $currentPattern[$j]);
-			if ($line[$k] eq "*"){ $emptyCol = 0; last; }
-		}
-		if (!$emptyCol){ last; }
-		$rightMostX--;
-	}
+        for my $j (0..scalar(@currentPattern)-1){
+            my @line = split(//, $currentPattern[$j]);
+            if ($line[$k] eq "*"){ $emptyCol = 0; last; }
+        }
+        if (!$emptyCol){ last; }
+        $rightMostX--;
+    }
 
-	if ($rightMostX < $MAX_COLS-1){
-		
-		for my $i (0..scalar(@currentPattern)-1){
-			my $line = $currentPattern[$i];
-			my @line = split(//, $line);
-			
-			my $xOffset = $currentBlockCoors[0];
-			my $yOffset = $currentBlockCoors[1];
-			for my $j (0..length($line)-1){
-				my $k = length($line)-1-$j;
-				if ($line[$k] eq "*") {
-					if (${$board[$i+$yOffset]}[$xOffset+$k+1]) {return;} # if a cell's right is filled, return with doing nth
-					last;
-				}
-			}
-		}
-	
-		# change @board data to 0
-		for my $i (0..scalar(@currentPattern)-1){
-			my $line = $currentPattern[$i];
-			my @line = split(//, $line);
-			
-			my $xOffset = $currentBlockCoors[0];
-			my $yOffset = $currentBlockCoors[1];
-			for my $j (0..length($line)-1){
-				if ($line[$j] eq "*") {
-					${$board[$i+$yOffset]}[$xOffset+$j] = 0;
-				}
-			}
-		}
-	
-		# move the tile
-		foreach my $unit (@currentBlock){
-			$wGame->move($unit, $TILE_SIZE, 0);
-		}
-		$currentBlockCoors[0] += 1;
-		$currentBlockCoors[2] += 1;
-		
-		# change @board data to 1
-		for my $i (0..scalar(@currentPattern)-1){
-			my $line = $currentPattern[$i];
-			my @line = split(//, $line);
-			
-			my $xOffset = $currentBlockCoors[0];
-			my $yOffset = $currentBlockCoors[1];
-			for my $j (0..length($line)-1){
-				if ($line[$j] eq "*") {
-					${$board[$i+$yOffset]}[$xOffset+$j] = 1;
-				}
-			}
-		}
-	}
-	#printBoard();
+    if ($rightMostX < $MAX_COLS-1){
+        
+        for my $i (0..scalar(@currentPattern)-1){
+            my $line = $currentPattern[$i];
+            my @line = split(//, $line);
+            
+            my $xOffset = $currentBlockCoors[0];
+            my $yOffset = $currentBlockCoors[1];
+            for my $j (0..length($line)-1){
+                my $k = length($line)-1-$j;
+                if ($line[$k] eq "*") {
+                    if (${$board[$i+$yOffset]}[$xOffset+$k+1]) {return;} # if a cell's right is filled, return with doing nth
+                    last;
+                }
+            }
+        }
+    
+        # change @board data to 0
+        for my $i (0..scalar(@currentPattern)-1){
+            my $line = $currentPattern[$i];
+            my @line = split(//, $line);
+            
+            my $xOffset = $currentBlockCoors[0];
+            my $yOffset = $currentBlockCoors[1];
+            for my $j (0..length($line)-1){
+                if ($line[$j] eq "*") {
+                    ${$board[$i+$yOffset]}[$xOffset+$j] = 0;
+                }
+            }
+        }
+    
+        # move the tile
+        foreach my $unit (@currentBlock){
+            $wGame->move($unit, $TILE_SIZE, 0);
+        }
+        $currentBlockCoors[0] += 1;
+        $currentBlockCoors[2] += 1;
+        
+        # change @board data to 1
+        for my $i (0..scalar(@currentPattern)-1){
+            my $line = $currentPattern[$i];
+            my @line = split(//, $line);
+            
+            my $xOffset = $currentBlockCoors[0];
+            my $yOffset = $currentBlockCoors[1];
+            for my $j (0..length($line)-1){
+                if ($line[$j] eq "*") {
+                    ${$board[$i+$yOffset]}[$xOffset+$j] = 1;
+                }
+            }
+        }
+    }
+    #printBoard();
 }
 
 sub moveLeft{
-	
-	my $leftMostX = $currentBlockCoors[0];
-	for my $i (0..length($currentPattern[0])-1){
-		my $emptyCol = 1;
+    
+    my $leftMostX = $currentBlockCoors[0];
+    for my $i (0..length($currentPattern[0])-1){
+        my $emptyCol = 1;
 
-		for my $j (0..scalar(@currentPattern)-1){
-			my @line = split(//, $currentPattern[$j]);
-			if ($line[$i] eq "*"){ $emptyCol = 0; last; }
-		}
-		if (!$emptyCol){ last; }
-		$leftMostX++;
-	}
+        for my $j (0..scalar(@currentPattern)-1){
+            my @line = split(//, $currentPattern[$j]);
+            if ($line[$i] eq "*"){ $emptyCol = 0; last; }
+        }
+        if (!$emptyCol){ last; }
+        $leftMostX++;
+    }
 
-	if ($leftMostX > 0){
-		
-		for my $i (0..scalar(@currentPattern)-1){
-			my $line = $currentPattern[$i];
-			my @line = split(//, $line);
-			
-			my $xOffset = $currentBlockCoors[0];
-			my $yOffset = $currentBlockCoors[1];
-			for my $j (0..length($line)-1){
-				if ($line[$j] eq "*") {
-					if (${$board[$i+$yOffset]}[$xOffset+$j-1]) {return;} # if a cell's left is filled, return with doing nth
-					last;
-				}
-			}
-		}
-	
-		# change @board data to 0
-		for my $i (0..scalar(@currentPattern)-1){
-			my $line = $currentPattern[$i];
-			my @line = split(//, $line);
-			
-			my $xOffset = $currentBlockCoors[0];
-			my $yOffset = $currentBlockCoors[1];
-			for my $j (0..length($line)-1){
-				if ($line[$j] eq "*") {
-					${$board[$i+$yOffset]}[$xOffset+$j] = 0;
-				}
-			}
-		}
-	
-		foreach my $unit (@currentBlock){
-			$wGame->move($unit, -$TILE_SIZE, 0);
-		}
-		$currentBlockCoors[0] -= 1;
-		$currentBlockCoors[2] -= 1;
-		
-		# change @board data to 1
-		for my $i (0..scalar(@currentPattern)-1){
-			my $line = $currentPattern[$i];
-			my @line = split(//, $line);
-			
-			my $xOffset = $currentBlockCoors[0];
-			my $yOffset = $currentBlockCoors[1];
-			for my $j (0..length($line)-1){
-				if ($line[$j] eq "*") {
-					${$board[$i+$yOffset]}[$xOffset+$j] = 1;
-				}
-			}
-		}
-	}
-	#printBoard();
+    if ($leftMostX > 0){
+        
+        for my $i (0..scalar(@currentPattern)-1){
+            my $line = $currentPattern[$i];
+            my @line = split(//, $line);
+            
+            my $xOffset = $currentBlockCoors[0];
+            my $yOffset = $currentBlockCoors[1];
+            for my $j (0..length($line)-1){
+                if ($line[$j] eq "*") {
+                    if (${$board[$i+$yOffset]}[$xOffset+$j-1]) {return;} # if a cell's left is filled, return with doing nth
+                    last;
+                }
+            }
+        }
+    
+        # change @board data to 0
+        for my $i (0..scalar(@currentPattern)-1){
+            my $line = $currentPattern[$i];
+            my @line = split(//, $line);
+            
+            my $xOffset = $currentBlockCoors[0];
+            my $yOffset = $currentBlockCoors[1];
+            for my $j (0..length($line)-1){
+                if ($line[$j] eq "*") {
+                    ${$board[$i+$yOffset]}[$xOffset+$j] = 0;
+                }
+            }
+        }
+    
+        foreach my $unit (@currentBlock){
+            $wGame->move($unit, -$TILE_SIZE, 0);
+        }
+        $currentBlockCoors[0] -= 1;
+        $currentBlockCoors[2] -= 1;
+        
+        # change @board data to 1
+        for my $i (0..scalar(@currentPattern)-1){
+            my $line = $currentPattern[$i];
+            my @line = split(//, $line);
+            
+            my $xOffset = $currentBlockCoors[0];
+            my $yOffset = $currentBlockCoors[1];
+            for my $j (0..length($line)-1){
+                if ($line[$j] eq "*") {
+                    ${$board[$i+$yOffset]}[$xOffset+$j] = 1;
+                }
+            }
+        }
+    }
+    #printBoard();
 }
 
 sub moveDown{
 
-	my $botMostY = $currentBlockCoors[3];
-	for my $i (1..scalar(@currentPattern)){
-		my $k = scalar(@currentPattern) - $i;
-		my @line = split(//, $currentPattern[$k]);
-		my $emptyCol = 1;
+    my $botMostY = $currentBlockCoors[3];
+    for my $i (1..scalar(@currentPattern)){
+        my $k = scalar(@currentPattern) - $i;
+        my @line = split(//, $currentPattern[$k]);
+        my $emptyCol = 1;
 
-		for my $j (0..scalar(@line)-1){
-			if ($line[$j] eq "*"){ $emptyCol = 0; last; }
-		}
-		if (!$emptyCol){ last; }
-		$botMostY--;
-	}
+        for my $j (0..scalar(@line)-1){
+            if ($line[$j] eq "*"){ $emptyCol = 0; last; }
+        }
+        if (!$emptyCol){ last; }
+        $botMostY--;
+    }
 
-	if ($botMostY < $MAX_ROWS-1){
-	
-		for my $i (0..length($currentPattern[0])-1){
-			for my $j (1..scalar(@currentPattern)){
-				my $k = scalar(@currentPattern)-$j;
-				my $line = $currentPattern[$k];
-				my @line = split(//, $line);
+    if ($botMostY < $MAX_ROWS-1){
+    
+        for my $i (0..length($currentPattern[0])-1){
+            for my $j (1..scalar(@currentPattern)){
+                my $k = scalar(@currentPattern)-$j;
+                my $line = $currentPattern[$k];
+                my @line = split(//, $line);
 
-				my $xOffset = $currentBlockCoors[0];
-				my $yOffset = $currentBlockCoors[1];
-				if ($line[$i] eq "*"){
-					if (${$board[$k+$yOffset+1]}[$i+$xOffset]) {return;}
-					last;
-				}
-			}
-		}
+                my $xOffset = $currentBlockCoors[0];
+                my $yOffset = $currentBlockCoors[1];
+                if ($line[$i] eq "*"){
+                    if (${$board[$k+$yOffset+1]}[$i+$xOffset]) {return;}
+                    last;
+                }
+            }
+        }
 
-		# change @board data to 0
-		for my $i (0..scalar(@currentPattern)-1){
-			my $line = $currentPattern[$i];
-			my @line = split(//, $line);
-			
-			my $xOffset = $currentBlockCoors[0];
-			my $yOffset = $currentBlockCoors[1];
-			for my $j (0..length($line)-1){
-				if ($line[$j] eq "*") {
-					${$board[$i+$yOffset]}[$xOffset+$j] = 0;
-				}
-			}
-		}
-	
-		foreach my $unit (@currentBlock){
-			$wGame->move($unit, 0, $TILE_SIZE);
-		}
-		$currentBlockCoors[1] += 1;
-		$currentBlockCoors[3] += 1;
-		
-		# change @board data to 1
-		for my $i (0..scalar(@currentPattern)-1){
-			my $line = $currentPattern[$i];
-			my @line = split(//, $line);
-			
-			my $xOffset = $currentBlockCoors[0];
-			my $yOffset = $currentBlockCoors[1];
-			for my $j (0..length($line)-1){
-				if ($line[$j] eq "*") {
-					${$board[$i+$yOffset]}[$xOffset+$j] = 1;
-				}
-			}
-		}
-	}
-	#printBoard();
+        # change @board data to 0
+        for my $i (0..scalar(@currentPattern)-1){
+            my $line = $currentPattern[$i];
+            my @line = split(//, $line);
+            
+            my $xOffset = $currentBlockCoors[0];
+            my $yOffset = $currentBlockCoors[1];
+            for my $j (0..length($line)-1){
+                if ($line[$j] eq "*") {
+                    ${$board[$i+$yOffset]}[$xOffset+$j] = 0;
+                }
+            }
+        }
+    
+        foreach my $unit (@currentBlock){
+            $wGame->move($unit, 0, $TILE_SIZE);
+        }
+        $currentBlockCoors[1] += 1;
+        $currentBlockCoors[3] += 1;
+        
+        # change @board data to 1
+        for my $i (0..scalar(@currentPattern)-1){
+            my $line = $currentPattern[$i];
+            my @line = split(//, $line);
+            
+            my $xOffset = $currentBlockCoors[0];
+            my $yOffset = $currentBlockCoors[1];
+            for my $j (0..length($line)-1){
+                if ($line[$j] eq "*") {
+                    ${$board[$i+$yOffset]}[$xOffset+$j] = 1;
+                }
+            }
+        }
+    }
+    #printBoard();
 }
 
 sub fallDown{
-	for my $i (1..$MAX_ROWS){
-		moveDown();
-	}
+    for my $i (1..$MAX_ROWS){
+        moveDown();
+    }
 }
 
 sub rotate{
@@ -514,54 +559,54 @@ sub rotate{
     my $yOffset = $currentBlockCoors[1];
     for my $j (0..length($line)-1){
       if ($line[$j] eq "*") {
-      	my $coor = ($i+$yOffset) * 100 + $xOffset+$j;
-      	push (@tempCoorsArray, $coor);
+          my $coor = ($i+$yOffset) * 100 + $xOffset+$j;
+          push (@tempCoorsArray, $coor);
         ${$board[$i+$yOffset]}[$xOffset+$j] = 0;
       }
     }
   }
   
-	my $displacement = 0; # -1:left, 0:stay, 1:right
+    my $displacement = 0; # -1:left, 0:stay, 1:right
 
-	# check if there is collision
-	for my $i (0..scalar(@newPattern)-1){
-		my $line = $newPattern[$i];
-		my @line = split(//, $line);
+    # check if there is collision
+    for my $i (0..scalar(@newPattern)-1){
+        my $line = $newPattern[$i];
+        my @line = split(//, $line);
 
-		my $xOffset = $currentBlockCoors[0];
-		my $yOffset = $currentBlockCoors[1];
-		for my $j (0..length($line)-1){
+        my $xOffset = $currentBlockCoors[0];
+        my $yOffset = $currentBlockCoors[1];
+        for my $j (0..length($line)-1){
 
-			if ($line[$j] eq "*") {
-				if ( (${$board[$i+$yOffset]}[$xOffset+$j]) 				# collision
-					|| ($i+$yOffset<0 || $i+$yOffset>$MAX_ROWS-1) ) {	# out of range (in terms of y coor)
-					# restore original state
-					foreach my $coor (@tempCoorsArray){
-						use integer;
-						my $row = $coor / 100;
-						my $col = $coor - $row * 100;
-						${$board[$row]}[$col] = 1;
-					}
-					return; 
-				}	
-				else {
-					if ($xOffset+$j<0 || $xOffset+$j>$MAX_COLS-1){ # out of range (in terms of x-coor)
-						if ($xOffset+$j<0) { $displacement += 1; } # crash left boundary -> move right one cell
-						else { $displacement -= 1; }  			  # crash right boundary -> move left one cell
-					}
-				}
-			}
-		}
-	}
+            if ($line[$j] eq "*") {
+                if ( (${$board[$i+$yOffset]}[$xOffset+$j])                 # collision
+                    || ($i+$yOffset<0 || $i+$yOffset>$MAX_ROWS-1) ) {    # out of range (in terms of y coor)
+                    # restore original state
+                    foreach my $coor (@tempCoorsArray){
+                        use integer;
+                        my $row = $coor / 100;
+                        my $col = $coor - $row * 100;
+                        ${$board[$row]}[$col] = 1;
+                    }
+                    return; 
+                }    
+                else {
+                    if ($xOffset+$j<0 || $xOffset+$j>$MAX_COLS-1){ # out of range (in terms of x-coor)
+                        if ($xOffset+$j<0) { $displacement += 1; } # crash left boundary -> move right one cell
+                        else { $displacement -= 1; }                # crash right boundary -> move left one cell
+                    }
+                }
+            }
+        }
+    }
 
-	if ($displacement != 0){ # not 0 -> need to displace
-		if ($currentColor eq $colors[2]){ # lazy, only this is exception to the above counting method
-			if ($displacement > 0) { $displacement = 1; }
-			else { $displacement = -1; }
-		}
-		$currentBlockCoors[0] += $displacement;
-		$currentBlockCoors[2] += $displacement;
-	}
+    if ($displacement != 0){ # not 0 -> need to displace
+        if ($currentColor eq $colors[2]){ # lazy, only this is exception to the above counting method
+            if ($displacement > 0) { $displacement = 1; }
+            else { $displacement = -1; }
+        }
+        $currentBlockCoors[0] += $displacement;
+        $currentBlockCoors[2] += $displacement;
+    }
 
   # delete the tile
   foreach my $unit (@currentBlock){
@@ -604,124 +649,97 @@ sub rotate{
 }
 
 sub drawLines{
-	for my $i (0 .. $MAX_ROWS){
-		$wGame->createLine(0, $i*$TILE_SIZE, $MAX_COLS*$TILE_SIZE, $i*$TILE_SIZE, '-fill' => 'black');}
-	for my $i (0 .. $MAX_COLS){
-		$wGame->createLine($i*$TILE_SIZE, 0, $i*$TILE_SIZE, $MAX_ROWS*$TILE_SIZE, '-fill' => 'black');}
+    for my $i (0 .. $MAX_ROWS){
+        $wGame->createLine(0, $i*$TILE_SIZE, $MAX_COLS*$TILE_SIZE, $i*$TILE_SIZE, '-fill' => 'black');}
+    for my $i (0 .. $MAX_COLS){
+        $wGame->createLine($i*$TILE_SIZE, 0, $i*$TILE_SIZE, $MAX_ROWS*$TILE_SIZE, '-fill' => 'black');}
 }
 
 sub printBoard{
-	foreach my $row (@board){
-		foreach my $cell (@$row){
-			if ($cell) {print "* ";}
-			else	   {print "  ";}
-		}
-		print "\n";
-	}
-}
-
-sub createNextTile {
-	# remove old tile
-	foreach my $unit (@nextBlock){
-		$wGame->delete($unit);
-	}
-
-	# create nxet tile
-	$nextIndex = int(rand (scalar (@patterns)));
-	my $color = $colors[$nextIndex];
-	my $pattern = $patterns[$nextIndex];
-	my $xOffset, my $height = scalar(@$pattern), my $width;
-	@nextBlock = ();
-
-	for my $i (0..scalar(@$pattern)-1){
-		my $line = @$pattern[$i];
-		my @line = split (//, $line);
-
-		for my $j (0..scalar(@line)-1){
-			my $char = @line[$j];
-			if ($char eq "*"){
-				my $unit = $wGame->createRectangle(($j+$MAX_COLS+2)*$TILE_SIZE, ($i+7)*$TILE_SIZE, ($j+$MAX_COLS+2+1)*$TILE_SIZE, ($i+1+7)*$TILE_SIZE, '-fill' => $color);
-				push @nextBlock, $unit;
-			}
-		}
-	}
+    foreach my $row (@board){
+        foreach my $cell (@$row){
+            if ($cell) {print "* ";}
+            else       {print "  ";}
+        }
+        print "\n";
+    }
 }
 
 sub createTile{
-    my $randomIndex = $nextIndex;
+    my $randomIndex = int(rand (scalar (@patterns)));
     my $color   = $colors[$randomIndex];
     $currentColor = $color;
     my $pattern = $patterns[$randomIndex];
-	my $xOffset, my $height = scalar(@$pattern), my $width;
-	@currentBlock = ();
+    my $xOffset, my $height = scalar(@$pattern), my $width;
+    @currentBlock = ();
 
-	for my $i (0..scalar(@$pattern)-1){
-		my $line = @$pattern[$i];
-		my @line = split (//, $line);
-		$xOffset = int(($MAX_COLS - length($line)) / 2);
-		$width = scalar(@line);
-		
-		for my $j (0..scalar(@line)-1){
-			my $char = @line[$j];
-			if ($char eq "*"){
-				my $unit = $wGame->createRectangle(($j+$xOffset)*$TILE_SIZE, $i*$TILE_SIZE, ($j+$xOffset+1)*$TILE_SIZE, ($i+1)*$TILE_SIZE, '-fill' => $color);
-				push @currentBlock, $unit;
-				${$board[$i]}[$j+$xOffset] = 1;
-			}
-		}
-	}
-	#printBoard();
-	@currentPattern = @$pattern;
-	@currentBlockCoors = ($xOffset, 0, $width+$xOffset-1, $height-1);
+    for my $i (0..scalar(@$pattern)-1){
+        my $line = @$pattern[$i];
+        my @line = split (//, $line);
+        $xOffset = int(($MAX_COLS - length($line)) / 2);
+        $width = scalar(@line);
+        
+        for my $j (0..scalar(@line)-1){
+            my $char = @line[$j];
+            if ($char eq "*"){
+                my $unit = $wGame->createRectangle(($j+$xOffset)*$TILE_SIZE, $i*$TILE_SIZE, ($j+$xOffset+1)*$TILE_SIZE, ($i+1)*$TILE_SIZE, '-fill' => $color);
+                push @currentBlock, $unit;
+                ${$board[$i]}[$j+$xOffset] = 1;
+            }
+        }
+    }
+    #printBoard();
+    @currentPattern = @$pattern;
+    @currentBlockCoors = ($xOffset, 0, $width+$xOffset-1, $height-1);
 }
 
 sub clearBoard{
-	for my $i (0..$MAX_ROWS-1){
-		my @dataRow;
-		my @colorRow;
-		for my $j (0..$MAX_COLS-1){
-			push (@dataRow, 0);
-			push (@colorRow, -1);
-		}
-		push (@board, \@dataRow);
-		push (@colorInBoard, \@colorRow);
-	}
+    for my $i (0..$MAX_ROWS-1){
+        my @dataRow;
+        my @colorRow;
+        for my $j (0..$MAX_COLS-1){
+            push (@dataRow, 0);
+            push (@colorRow, -1);
+        }
+        push (@board, \@dataRow);
+        push (@colorInBoard, \@colorRow);
+    }
 }
 
 sub createTempTile{
-	my @coor = @_;
-	$wGame->createRectangle($coor[1]*$TILE_SIZE, $coor[0]*$TILE_SIZE, ($coor[1]+1)*$TILE_SIZE, ($coor[0]+1)*$TILE_SIZE, '-fill'=>'#123456');
-	${$board[$coor[0]]}[$coor[1]] = 1;
+    my @coor = @_;
+    $wGame->createRectangle($coor[1]*$TILE_SIZE, $coor[0]*$TILE_SIZE, ($coor[1]+1)*$TILE_SIZE, ($coor[0]+1)*$TILE_SIZE, '-fill'=>'#123456');
+    ${$board[$coor[0]]}[$coor[1]] = 1;
 }
 
 sub createTempTiles{
-	my @coors = @_;
-	for my $row ($coors[0]..$coors[2]){
-		createTempTile($row, $coors[1]);
-	}
+    my @coors = @_;
+    for my $row ($coors[0]..$coors[2]){
+        createTempTile($row, $coors[1]);
+    }
 }
 
 sub init{
-	createScreen();
-	drawLines();
-	srand();
-	$wBase->bind('<KeyPress-Left>', \&moveLeft);
-	$wBase->bind('<KeyPress-Right>', \&moveRight);
-	$wBase->bind('<KeyPress-Down>', \&moveDown);
-	$wBase->bind('<KeyPress-space>', \&fallDown);
+    createScreen();
+    drawLines();
+    srand();
+    $wBase->bind('<KeyPress-Left>', \&moveLeft);
+    $wBase->bind('<KeyPress-Right>', \&moveRight);
+    $wBase->bind('<KeyPress-Down>', \&moveDown);
+    $wBase->bind('<KeyPress-space>', \&fallDown);
     $wBase->bind('<KeyPress-Up>', \&rotate);
-	clearBoard();
+    clearBoard();
 
-	# the following lines are for testing
-	createTempTiles(19,0,21,0);
-	createTempTiles(19,1,21,1);
-	createTempTiles(16,2,21,2);
-	createTempTiles(17,3,21,3);
-	createTempTiles(17,4,21,4);
-	createTempTiles(20,5,21,5);
-	createTempTiles(14,6,21,6);
-	createTempTiles(20,8,21,8);
-	createTempTiles(19,9,21,9);
+    # the following lines are for testing
+    #createTempTiles(19,0,21,0);
+    #createTempTiles(19,1,21,1);
+    #createTempTiles(16,2,21,2);
+    #createTempTiles(17,3,21,3);
+    #createTempTiles(17,4,21,4);
+    #createTempTiles(20,5,21,5);
+    #createTempTiles(14,6,21,6);
+    #createTempTiles(20,8,21,8);
+    #createTempTiles(19,9,21,9);
 }
 
 init();
