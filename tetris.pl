@@ -10,9 +10,12 @@ my $wStartButton;                         # start button widget
 my $wBase;                                # top level widget
 my $wGame;                                # canvas
 
+my $level = 1;
+my $score = 0;
 my $gameover = 0;
 my $playing = 0;
-my $updateInterval = 500;
+my $basicUpdateInterval = 500;
+my $updateInterval = $basicUpdateInterval;
 
 my @patterns = ([" * ",
                  "***",
@@ -157,8 +160,40 @@ sub isFullRow{
 }
 
 sub clearRows{
+	my $count = 0;
 	for my $row (0..$MAX_ROWS-1){
-		if (isFullRow($row)){ clearRow($row); }
+		if (isFullRow($row)){ clearRow($row); $count++; }
+	}
+	if ($count != 0) { calculateScore($count); }
+}
+
+sub calculateScore{
+	my $count = $_[0];
+	if ($count == 1){ $score += (100*$level); }
+	else { 
+		if ($count == 2) { $score += (300*$level); }
+		else { 
+			if ($count == 3) { $score += (600*$level); }
+			else { if ($count == 4) { $score += (1000*$level); } } } }
+	#print "score is now : $score\n";
+	adjustDifficulty();
+}
+
+sub adjustDifficulty{
+	my $minus = 50;
+	my @interval = (1000, 2500, 5000, 9000, 15000); 
+	if ($updateInterval > 250) {
+		for my $i (1..scalar(@interval)){
+			my $k = scalar(@interval)-$i; # $k = len-1, len-2, ..., 1, 0
+			print "$score vs $interval[$k]\n";
+			if ($score >= $interval[$k]){
+				$updateInterval = $basicUpdateInterval - $minus * ($k+1);
+				$level = $k+1;
+				last;
+			}
+		}
+		#print "update interval is now : $updateInterval\n";
+		#print "level is now : $level\n\n";
 	}
 }
 
@@ -634,7 +669,7 @@ sub init{
 	$wBase->bind('<KeyPress-Right>', \&moveRight);
 	$wBase->bind('<KeyPress-Down>', \&moveDown);
 	$wBase->bind('<KeyPress-space>', \&fallDown);
-    	$wBase->bind('<KeyPress-Up>', \&rotate);
+    $wBase->bind('<KeyPress-Up>', \&rotate);
 	clearBoard();
 
 	# the following lines are for testing
