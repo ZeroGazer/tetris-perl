@@ -89,9 +89,11 @@ sub createScreen{
     $wGame = $wBase->Canvas('-width'  => ($MAX_COLS+6) * $TILE_SIZE,
                              '-height' => $MAX_ROWS  * $TILE_SIZE,
                              '-border' => 1,
-                             '-relief' => 'ridge');			
-    $wScore = $wGame->createText(($MAX_COLS+2)*$TILE_SIZE, 3*$TILE_SIZE, -text=>"Score : $score", -justify=>"left");
-    $wGame->createText(($MAX_COLS+2)*$TILE_SIZE, 5*$TILE_SIZE, -text=>"Next Tetrominoe :", -justify=>"left");
+                             '-relief' => 'ridge');	
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"w", -text=>"Score :",);
+    $wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 5*$TILE_SIZE, -anchor=>"w", -text=>"Next Tetrominoe :");
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 11*$TILE_SIZE, -anchor=>"w", -text=>"Rank :",);
     my $wStartButton = $wBase->Button('-text' => 'Start',
                               '-command' => \&start,
                               );
@@ -186,18 +188,17 @@ sub calculateScore{
 			else { if ($count == 4) { $score += (1000*$level); } } } }
 
 	$wGame->delete($wScore);
-	$wScore = $wGame->createText(($MAX_COLS+2)*$TILE_SIZE, 3*$TILE_SIZE, -text=>"Score : $score", -justify=>"left");
+	$wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
 
 	adjustDifficulty();
 }
 
 sub adjustDifficulty{
 	my $minus = 50;
-	my @interval = (1000, 2500, 5000, 9000, 15000); 
-	if ($updateInterval > 250) {
+	my @interval = (1000, 2500, 5000, 9000, 15000, 30000); 
+	if ($updateInterval > 200) {
 		for my $i (1..scalar(@interval)){
 			my $k = scalar(@interval)-$i; # $k = len-1, len-2, ..., 1, 0
-			print "$score vs $interval[$k]\n";
 			if ($score >= $interval[$k]){
 				$updateInterval = $basicUpdateInterval - $minus * ($k+1);
 				$level = $k+1;
