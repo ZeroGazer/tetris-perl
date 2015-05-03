@@ -42,6 +42,9 @@ my @patterns = ([" * ",
                  "**"]);
 my @colors = qw(#BA55D3 #8EE5EE #FFA500 #0000FF #00FF00 #FF0000 #FFFF00);
 
+
+my $nextIndex;
+my @nextBlock;
 my @currentBlock;
 my @currentPattern;
 my $currentColor;
@@ -63,7 +66,10 @@ sub update{
 
             clearRows();
             if (isHitSky()) { gameover(); } # gameover when hitting both ground and sky
-            else            { createTile(); }
+            else{ 
+                createTile();
+                createNextTile();
+            }
         }
     moveDown();
         $wBase->after($updateInterval, \&update);
@@ -71,7 +77,8 @@ sub update{
 }
 
 sub start{
-    if (!$playing){    
+    if (!$playing){  
+        createNextTile();  
         createTile();
         $wBase->after($updateInterval, \&update);
         $playing = 1;
@@ -665,8 +672,35 @@ sub printBoard{
     }
 }
 
+sub createNextTile {
+    # remove old tile
+    foreach my $unit (@nextBlock){
+        $wGame->delete($unit);
+    }
+
+    # create nxet tile
+    $nextIndex = int(rand (scalar (@patterns)));
+    my $color = $colors[$nextIndex];
+    my $pattern = $patterns[$nextIndex];
+    my $xOffset, my $height = scalar(@$pattern), my $width;
+    @nextBlock = ();
+
+    for my $i (0..scalar(@$pattern)-1){
+        my $line = @$pattern[$i];
+        my @line = split (//, $line);
+
+        for my $j (0..scalar(@line)-1){
+            my $char = @line[$j];
+            if ($char eq "*"){
+                my $unit = $wGame->createRectangle(($j+$MAX_COLS+2)*$TILE_SIZE, ($i+7)*$TILE_SIZE, ($j+$MAX_COLS+2+1)*$TILE_SIZE, ($i+1+7)*$TILE_SIZE, '-fill' => $color);
+                push @nextBlock, $unit;
+            }
+        }
+    }
+}
+
 sub createTile{
-    my $randomIndex = int(rand (scalar (@patterns)));
+    my $randomIndex = $nextIndex;
     my $color   = $colors[$randomIndex];
     $currentColor = $color;
     my $pattern = $patterns[$randomIndex];
