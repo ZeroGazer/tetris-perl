@@ -11,10 +11,11 @@ my $wStartButton;                         # start button widget
 my $wBase;                                # top level widget
 my $wGame;                                # canvas
 my $wScore;
+my @wHistory;
 my $updateTimer;
 
 my $level;
-my $score;
+my $score = 0;
 my $playing = 0;
 my $basicUpdateInterval = 500;
 my $updateInterval = $basicUpdateInterval;
@@ -83,6 +84,9 @@ sub start{
         Win32::Sound::Play("bgm.wav", SND_ASYNC | SND_LOOP);
         $level = 1;
         $score = 0;
+        $wGame->delete($wScore);
+        $wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");$wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
+        printHistory();
         createNextTile();  
         createTile();
         $wBase->after($updateInterval, \&update);
@@ -90,16 +94,11 @@ sub start{
     }
 }
 
-sub createScreen{
-    $wBase = MainWindow->new(-title => 'Tetris - Perl/Tk');
+sub printHistory{
 
-    $wGame = $wBase->Canvas('-width'  => ($MAX_COLS+7) * $TILE_SIZE,
-                             '-height' => $MAX_ROWS  * $TILE_SIZE,
-                             '-border' => 1,
-                             '-relief' => 'ridge');    
-    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"w", -text=>"Score :",);
-    $wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
-    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 5*$TILE_SIZE, -anchor=>"w", -text=>"Next Tetrominoe :");
+    foreach my $widget (@wHistory){
+        $wGame->delete($widget);
+    }
 
     # history
     if (-e "score.txt"){
@@ -117,11 +116,25 @@ sub createScreen{
         $wGame->createLine(($MAX_COLS+1)*$TILE_SIZE, (12.5+$count)*$TILE_SIZE, ($MAX_COLS+6)*$TILE_SIZE, (12.5+$count)*$TILE_SIZE);
         foreach my $key (sort { $history{$b} <=> $history{$a} or $b cmp $a } keys %history){
             # print "$key -> $history{$key}\n";
-            $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (13+$count)*$TILE_SIZE, -anchor=>"w", -text=>"$key");   # name
-            $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (13+$count)*$TILE_SIZE, -anchor=>"e", -text=>"$history{$key}");   # score
+            push @wHistory, $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (13+$count)*$TILE_SIZE, -anchor=>"w", -text=>"$key");   # name
+            push @wHistory, $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (13+$count)*$TILE_SIZE, -anchor=>"e", -text=>"$history{$key}");   # score
             $count ++;
         }
     }
+}
+
+sub createScreen{
+    $wBase = MainWindow->new(-title => 'Tetris - Perl/Tk');
+
+    $wGame = $wBase->Canvas('-width'  => ($MAX_COLS+7) * $TILE_SIZE,
+                             '-height' => $MAX_ROWS  * $TILE_SIZE,
+                             '-border' => 1,
+                             '-relief' => 'ridge');    
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"w", -text=>"Score :",);
+    $wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 5*$TILE_SIZE, -anchor=>"w", -text=>"Next Tetrominoe :");
+
+    printHistory();
 
     my $wStartButton = $wBase->Button('-text' => 'Start',
                               '-command' => \&start
@@ -293,7 +306,7 @@ sub gameover{
     my $min = 9999999;
     $_ < $min and $min = $_ for values %history;
 
-    if ($score > $min || !(-e "score.txt")){
+    if ($score > $min || !(-e "score.txt") || scalar(%history)<5){
         my $wFinish = MainWindow->new;
         my $name;
 
