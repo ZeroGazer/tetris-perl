@@ -11,10 +11,10 @@ my $wStartButton;                         # start button widget
 my $wBase;                                # top level widget
 my $wGame;                                # canvas
 my $wScore;
+my $updateTimer;
 
-my $level = 1;
-my $score = 0;
-my $gameover = 0;
+my $level;
+my $score;
 my $playing = 0;
 my $basicUpdateInterval = 500;
 my $updateInterval = $basicUpdateInterval;
@@ -55,7 +55,7 @@ my @board;
 my @colorInBoard; # -1:no color, 0:color0, ...
 
 sub update{
-    if (!$gameover && $playing){
+    if ($playing){
         if (isHitGround()){ 
             rmbColor();
 
@@ -72,8 +72,8 @@ sub update{
                 createNextTile();
             }
         }
-    moveDown();
-        $wBase->after($updateInterval, \&update);
+        moveDown();
+        $updateTimer = $wBase->after($updateInterval, \&update);
     }
 }
 
@@ -81,6 +81,8 @@ sub start{
     if (!$playing){  
         Win32::Sound::Volume('100%');
         Win32::Sound::Play("bgm.wav", SND_ASYNC | SND_LOOP);
+        $level = 1;
+        $score = 0;
         createNextTile();  
         createTile();
         $wBase->after($updateInterval, \&update);
@@ -130,6 +132,11 @@ sub createScreen{
     $wGame->pack();
     $wStartButton->pack('-side'=> 'left', '-fill' => 'y', '-expand' => 'y');
     $wQuitBitton->pack('-side'=> 'right', '-fill' => 'y', '-expand' => 'y');
+    $wBase->bind('<KeyPress-Left>', \&moveLeft);
+    $wBase->bind('<KeyPress-Right>', \&moveRight);
+    $wBase->bind('<KeyPress-Down>', \&moveDown);
+    $wBase->bind('<KeyPress-space>', \&fallDown);
+    $wBase->bind('<KeyPress-Up>', \&rotate);
 }
 
 sub rmbColor{
@@ -273,13 +280,13 @@ sub isHitGround{
                 }
             }
         }
-    return 0;
+        return 0;
     }
 }
 
 sub gameover{
     Win32::Sound::Stop();
-    $gameover = 1;
+    $wBase->afterCancel($updateTimer);
     $playing = 0;
     print "gameover!\n";
 
@@ -310,8 +317,21 @@ sub gameover{
                 }
                 close(OUTFILE);
                 $wFinish->destroy();
+                foreach my $block (@fixedBlock) {
+                    $wGame->delete($block);
+                }
+                @fixedBlock = ();
+                clearBoard();
+                start();
             }
         )->pack();
+    } else {
+      foreach my $block (@fixedBlock) {
+          $wGame->delete($block);
+      }
+      @fixedBlock = ();
+      clearBoard();
+      start();
     }
 }
 
@@ -736,14 +756,10 @@ sub createTile{
 
 sub clearBoard{
     for my $i (0..$MAX_ROWS-1){
-        my @dataRow;
-        my @colorRow;
         for my $j (0..$MAX_COLS-1){
-            push (@dataRow, 0);
-            push (@colorRow, -1);
+            $board[$i][$j] = 0;
+            $colorInBoard[$i][$j] = -1;
         }
-        push (@board, \@dataRow);
-        push (@colorInBoard, \@colorRow);
     }
 }
 
@@ -764,11 +780,6 @@ sub init{
     createScreen();
     drawLines();
     srand();
-    $wBase->bind('<KeyPress-Left>', \&moveLeft);
-    $wBase->bind('<KeyPress-Right>', \&moveRight);
-    $wBase->bind('<KeyPress-Down>', \&moveDown);
-    $wBase->bind('<KeyPress-space>', \&fallDown);
-    $wBase->bind('<KeyPress-Up>', \&rotate);
     clearBoard();
 
     # the following lines are for testing
