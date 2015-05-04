@@ -10,11 +10,12 @@ my $TILE_SIZE        = 20;        # size of each tile in pixels
 my $wStartButton;                         # start button widget
 my $wBase;                                # top level widget
 my $wGame;                                # canvas
+my $wLevel;
 my $wScore;
 my @wHistory;
 my $updateTimer;
 
-my $level;
+my $level = 1;
 my $score = 0;
 my $playing = 0;
 my $basicUpdateInterval = 500;
@@ -84,8 +85,10 @@ sub start{
         Win32::Sound::Play("bgm.wav", SND_ASYNC | SND_LOOP);
         $level = 1;
         $score = 0;
+        $wGame->delete($wLevel);
+        $wLevel = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 2*$TILE_SIZE, -anchor=>"e", -text=>"$level");
         $wGame->delete($wScore);
-        $wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");$wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
+        $wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
         printHistory();
         createNextTile();  
         createTile();
@@ -119,6 +122,7 @@ sub printHistory{
             push @wHistory, $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (13+$count)*$TILE_SIZE, -anchor=>"w", -text=>"$key");   # name
             push @wHistory, $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (13+$count)*$TILE_SIZE, -anchor=>"e", -text=>"$history{$key}");   # score
             $count ++;
+            if ($count == 5){ last; }
         }
     }
 }
@@ -129,7 +133,9 @@ sub createScreen{
     $wGame = $wBase->Canvas('-width'  => ($MAX_COLS+7) * $TILE_SIZE,
                              '-height' => $MAX_ROWS  * $TILE_SIZE,
                              '-border' => 1,
-                             '-relief' => 'ridge');    
+                             '-relief' => 'ridge'); 
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 2*$TILE_SIZE, -anchor=>"w", -text=>"Level :",);
+    $wLevel = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 2*$TILE_SIZE, -anchor=>"e", -text=>"$level");
     $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"w", -text=>"Score :",);
     $wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
     $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 5*$TILE_SIZE, -anchor=>"w", -text=>"Next Tetrominoe :");
@@ -248,12 +254,13 @@ sub adjustDifficulty{
             my $k = scalar(@interval)-$i; # $k = len-1, len-2, ..., 1, 0
             if ($score >= $interval[$k]){
                 $updateInterval = $basicUpdateInterval - $minus * ($k+1);
-                $level = $k+1;
+                $level = $k+2;
+                print "level = $level\n";
+                $wGame->delete($wLevel);
+                $wLevel = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 2*$TILE_SIZE, -anchor=>"e", -text=>"$level");
                 last;
             }
         }
-        #print "update interval is now : $updateInterval\n";
-        #print "level is now : $level\n\n";
     }
 }
 
