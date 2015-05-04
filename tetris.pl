@@ -1,5 +1,6 @@
 use strict;
 use Tk;
+use Win32::Sound;
 
 my $MAX_COLS         = 10 ;       # 10 cells wide
 my $MAX_ROWS         = 22 ;       # 15 cells high
@@ -78,6 +79,8 @@ sub update{
 
 sub start{
     if (!$playing){  
+        Win32::Sound::Volume('100%');
+        Win32::Sound::Play("bgm.wav", SND_ASYNC | SND_LOOP);
         createNextTile();  
         createTile();
         $wBase->after($updateInterval, \&update);
@@ -275,6 +278,7 @@ sub isHitGround{
 }
 
 sub gameover{
+    Win32::Sound::Stop();
     $gameover = 1;
     $playing = 0;
     print "gameover!\n";
