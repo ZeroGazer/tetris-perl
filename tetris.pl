@@ -287,28 +287,31 @@ sub gameover{
     $_ < $min and $min = $_ for values %history;
 
     if ($score > $min || !(-e "score.txt")){
-        #my $wFinish = MainWindow->new(-title => 'Tetris - Perl/Tk');
-        #my $name;
-        #my $entry = $wFinish->Entry(-textvariable => \$name)->pack;
-        #$entry->bind('<Return>', sub{
-        #        print "input name : $name";
-        #        $wFinish
-        #    });
-        #entry->focus;
+        my $wFinish = MainWindow->new;
+        my $name;
 
-        print "You are Top 5! Please enter your name : ";
-        my $name = <STDIN>;
-        chomp($name);
-        $history{$name} = $score;
-        open(OUTFILE, ">score.txt");
-        my $count = 0;
-        foreach my $key (sort { $history{$b} <=> $history{$a} or $b cmp $a } keys %history) {
-            print OUTFILE "$key\t$history{$key}";
-            $count ++;
-            if ($count >= 5) { last; }
-            else { print OUTFILE "\n"; }
-        }
-        close(OUTFILE);
+        $wFinish->title("Text Entry");
+
+        $wFinish->Label(-text => "You are Top 5! Please enter your name : ")->pack();
+
+        my $entry = $wFinish->Entry(-textvariable => \$name)->pack();
+
+        $wFinish->Button(
+            -text => "Ok",
+            -command => sub {
+                $history{$name} = $score;
+                open(OUTFILE, ">score.txt");
+                my $count = 0;
+                foreach my $key (sort { $history{$b} <=> $history{$a} or $b cmp $a } keys %history) {
+                    print OUTFILE "$key\t$history{$key}";
+                    $count ++;
+                    if ($count >= 5) { last; }
+                    else { print OUTFILE "\n"; }
+                }
+                close(OUTFILE);
+                $wFinish->destroy();
+            }
+        )->pack();
     }
 }
 
