@@ -297,7 +297,7 @@ sub gameover{
         my $wFinish = MainWindow->new;
         my $name;
 
-        $wFinish->title("Text Entry");
+        $wFinish->title("Input your name");
 
         $wFinish->Label(-text => "You are Top 5! Please enter your name : ")->pack();
 
@@ -317,22 +317,43 @@ sub gameover{
                 }
                 close(OUTFILE);
                 $wFinish->destroy();
-                foreach my $block (@fixedBlock) {
-                    $wGame->delete($block);
-                }
-                @fixedBlock = ();
-                clearBoard();
-                start();
+                restart();
             }
         )->pack();
     } else {
-      foreach my $block (@fixedBlock) {
-          $wGame->delete($block);
-      }
-      @fixedBlock = ();
-      clearBoard();
-      start();
+      restart();
     }
+}
+
+sub restart() {
+    my $wRestart = MainWindow->new;
+    my $name;
+
+    $wRestart->title("Restart?");
+
+    $wRestart->Label(-text => "Do you want to restart?")->pack();
+
+    $wRestart->Button(
+        -text => "Yes",
+        -command => sub {
+            $wRestart->destroy();
+            foreach my $block (@fixedBlock) {
+                $wGame->delete($block);
+            }
+            @fixedBlock = ();
+            clearBoard();
+            start();
+        }
+    )->pack(-side=> 'left');
+    
+    $wRestart->Button(
+        -text => "No",
+        -command => sub {
+            exit(0);
+        }
+    )->pack(-side=> 'right');
+    
+    $wRestart->focusForce();
 }
 
 sub moveRight{
