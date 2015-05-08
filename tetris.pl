@@ -449,7 +449,6 @@ sub moveRight{
             }
         }
     }
-    #printBoard();
 }
 
 sub moveLeft{
@@ -516,7 +515,6 @@ sub moveLeft{
             }
         }
     }
-    #printBoard();
 }
 
 sub moveDown{
@@ -585,7 +583,6 @@ sub moveDown{
             }
         }
     }
-    #printBoard();
 }
 
 sub fallDown{
@@ -725,8 +722,6 @@ sub rotate{
       }
     }
   }
-
-  #printBoard();
 }
 
 sub drawLines{
@@ -796,7 +791,6 @@ sub createTile{
             }
         }
     }
-    #printBoard();
     @currentPattern = @$pattern;
     @currentBlockCoors = ($xOffset, 0, $width+$xOffset-1, $height-1);
 }
@@ -810,35 +804,11 @@ sub clearBoard{
     }
 }
 
-sub createTempTile{
-    my @coor = @_;
-    $wGame->createRectangle($coor[1]*$TILE_SIZE, $coor[0]*$TILE_SIZE, ($coor[1]+1)*$TILE_SIZE, ($coor[0]+1)*$TILE_SIZE, '-fill'=>'#123456');
-    ${$board[$coor[0]]}[$coor[1]] = 1;
-}
-
-sub createTempTiles{
-    my @coors = @_;
-    for my $row ($coors[0]..$coors[2]){
-        createTempTile($row, $coors[1]);
-    }
-}
-
 sub init{
     createScreen();
     drawLines();
     srand();
     clearBoard();
-
-    # the following lines are for testing
-    #createTempTiles(19,0,21,0);
-    #createTempTiles(19,1,21,1);
-    #createTempTiles(16,2,21,2);
-    #createTempTiles(17,3,21,3);
-    #createTempTiles(17,4,21,4);
-    #createTempTiles(20,5,21,5);
-    #createTempTiles(14,6,21,6);
-    #createTempTiles(20,8,21,8);
-    #createTempTiles(19,9,21,9);
 }
 
 init();
