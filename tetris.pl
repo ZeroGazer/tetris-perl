@@ -114,19 +114,12 @@ sub printHistory{
         }
 
         my $count = 0;
-<<<<<<< HEAD
-        $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 9*$TILE_SIZE, -anchor=>"w", -text=>"Rank :");
-        $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (10+$count)*$TILE_SIZE, -anchor=>"w", -text=>"Name");   # name
-        $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (10+$count)*$TILE_SIZE, -anchor=>"e", -text=>"Score");   # score
-        $wGame->createLine(($MAX_COLS+1)*$TILE_SIZE, (10.5+$count)*$TILE_SIZE, ($MAX_COLS+6)*$TILE_SIZE, (10.5+$count)*$TILE_SIZE);
-        foreach my $key (sort { $history{$b} <=> $history{$a} or $b cmp $a } keys %history){
-=======
         $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 11*$TILE_SIZE, -anchor=>"w", -text=>"Rank :");
         $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (12+$count)*$TILE_SIZE, -anchor=>"w", -text=>"Name");   # name
         $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (12+$count)*$TILE_SIZE, -anchor=>"e", -text=>"Score");   # score
         $wGame->createLine(($MAX_COLS+1)*$TILE_SIZE, (12.5+$count)*$TILE_SIZE, ($MAX_COLS+6)*$TILE_SIZE, (12.5+$count)*$TILE_SIZE);
         foreach my $key (sort { $history{$b} <=> $history{$a} or $a cmp $b } keys %history){
->>>>>>> 9d3b1593421816f964abc5bf1b3084ef27ad341c
+
             # print "$key -> $history{$key}\n";
             push @wHistory, $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (11+$count)*$TILE_SIZE, -anchor=>"w", -text=>"$key");   # name
             push @wHistory, $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (11+$count)*$TILE_SIZE, -anchor=>"e", -text=>"$history{$key}");   # score
