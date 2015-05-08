@@ -85,6 +85,7 @@ sub start{
         Win32::Sound::Play("bgm.wav", SND_ASYNC | SND_LOOP);
         $level = 1;
         $score = 0;
+        $updateInterval = $basicUpdateInterval;
         $wGame->delete($wLevel);
         $wLevel = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 2*$TILE_SIZE, -anchor=>"e", -text=>"$level");
         $wGame->delete($wScore);
@@ -113,11 +114,19 @@ sub printHistory{
         }
 
         my $count = 0;
+<<<<<<< HEAD
         $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 9*$TILE_SIZE, -anchor=>"w", -text=>"Rank :");
         $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (10+$count)*$TILE_SIZE, -anchor=>"w", -text=>"Name");   # name
         $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (10+$count)*$TILE_SIZE, -anchor=>"e", -text=>"Score");   # score
         $wGame->createLine(($MAX_COLS+1)*$TILE_SIZE, (10.5+$count)*$TILE_SIZE, ($MAX_COLS+6)*$TILE_SIZE, (10.5+$count)*$TILE_SIZE);
         foreach my $key (sort { $history{$b} <=> $history{$a} or $b cmp $a } keys %history){
+=======
+        $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 11*$TILE_SIZE, -anchor=>"w", -text=>"Rank :");
+        $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (12+$count)*$TILE_SIZE, -anchor=>"w", -text=>"Name");   # name
+        $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (12+$count)*$TILE_SIZE, -anchor=>"e", -text=>"Score");   # score
+        $wGame->createLine(($MAX_COLS+1)*$TILE_SIZE, (12.5+$count)*$TILE_SIZE, ($MAX_COLS+6)*$TILE_SIZE, (12.5+$count)*$TILE_SIZE);
+        foreach my $key (sort { $history{$b} <=> $history{$a} or $a cmp $b } keys %history){
+>>>>>>> 9d3b1593421816f964abc5bf1b3084ef27ad341c
             # print "$key -> $history{$key}\n";
             push @wHistory, $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (11+$count)*$TILE_SIZE, -anchor=>"w", -text=>"$key");   # name
             push @wHistory, $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (11+$count)*$TILE_SIZE, -anchor=>"e", -text=>"$history{$key}");   # score
@@ -260,7 +269,6 @@ sub adjustDifficulty{
             if ($score >= $interval[$k]){
                 $updateInterval = $basicUpdateInterval - $minus * ($k+1);
                 $level = $k+2;
-                print "level = $level\n";
                 $wGame->delete($wLevel);
                 $wLevel = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 2*$TILE_SIZE, -anchor=>"e", -text=>"$level");
                 last;
@@ -331,7 +339,7 @@ sub gameover{
         $wFinish->Button(
             -text => "Ok",
             -command => sub {
-                $history{$name} = $score;
+                if ($history{$name} < $score){ $history{$name} = $score; }
                 open(OUTFILE, ">score.txt");
                 my $count = 0;
                 foreach my $key (sort { $history{$b} <=> $history{$a} or $b cmp $a } keys %history) {
