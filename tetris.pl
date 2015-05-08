@@ -113,14 +113,14 @@ sub printHistory{
         }
 
         my $count = 0;
-        $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 11*$TILE_SIZE, -anchor=>"w", -text=>"Rank :");
-        $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (12+$count)*$TILE_SIZE, -anchor=>"w", -text=>"Name");   # name
-        $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (12+$count)*$TILE_SIZE, -anchor=>"e", -text=>"Score");   # score
-        $wGame->createLine(($MAX_COLS+1)*$TILE_SIZE, (12.5+$count)*$TILE_SIZE, ($MAX_COLS+6)*$TILE_SIZE, (12.5+$count)*$TILE_SIZE);
+        $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 9*$TILE_SIZE, -anchor=>"w", -text=>"Rank :");
+        $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (10+$count)*$TILE_SIZE, -anchor=>"w", -text=>"Name");   # name
+        $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (10+$count)*$TILE_SIZE, -anchor=>"e", -text=>"Score");   # score
+        $wGame->createLine(($MAX_COLS+1)*$TILE_SIZE, (10.5+$count)*$TILE_SIZE, ($MAX_COLS+6)*$TILE_SIZE, (10.5+$count)*$TILE_SIZE);
         foreach my $key (sort { $history{$b} <=> $history{$a} or $b cmp $a } keys %history){
             # print "$key -> $history{$key}\n";
-            push @wHistory, $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (13+$count)*$TILE_SIZE, -anchor=>"w", -text=>"$key");   # name
-            push @wHistory, $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (13+$count)*$TILE_SIZE, -anchor=>"e", -text=>"$history{$key}");   # score
+            push @wHistory, $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (11+$count)*$TILE_SIZE, -anchor=>"w", -text=>"$key");   # name
+            push @wHistory, $wGame->createText(($MAX_COLS+6)*$TILE_SIZE, (11+$count)*$TILE_SIZE, -anchor=>"e", -text=>"$history{$key}");   # score
             $count ++;
             if ($count == 5){ last; }
         }
@@ -140,6 +140,11 @@ sub createScreen{
     $wScore = $wGame->createText(($MAX_COLS+5)*$TILE_SIZE, 3*$TILE_SIZE, -anchor=>"e", -text=>"$score");
     $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, 5*$TILE_SIZE, -anchor=>"w", -text=>"Next Tetrominoe :");
 
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (17)*$TILE_SIZE, -anchor=>"w", -text=>"Up: rotate");
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (18)*$TILE_SIZE, -anchor=>"w", -text=>"Left: move left");
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (19)*$TILE_SIZE, -anchor=>"w", -text=>"Right: move right");
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (20)*$TILE_SIZE, -anchor=>"w", -text=>"Down: soft drop");
+    $wGame->createText(($MAX_COLS+1)*$TILE_SIZE, (21)*$TILE_SIZE, -anchor=>"w", -text=>"Space: hard drop");
     printHistory();
 
     my $wStartButton = $wBase->Button('-text' => 'Start',
@@ -760,7 +765,7 @@ sub createNextTile {
         for my $j (0..scalar(@line)-1){
             my $char = @line[$j];
             if ($char eq "*"){
-                my $unit = $wGame->createRectangle(($j+$MAX_COLS+2)*$TILE_SIZE, ($i+7)*$TILE_SIZE, ($j+$MAX_COLS+2+1)*$TILE_SIZE, ($i+1+7)*$TILE_SIZE, '-fill' => $color);
+                my $unit = $wGame->createRectangle(($j+$MAX_COLS+2)*$TILE_SIZE, ($i+6)*$TILE_SIZE, ($j+$MAX_COLS+2+1)*$TILE_SIZE, ($i+1+6)*$TILE_SIZE, '-fill' => $color);
                 push @nextBlock, $unit;
             }
         }
